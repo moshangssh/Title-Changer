@@ -23,41 +23,48 @@ export class FolderChecker {
         const filePath = this.getFilePath(file);
 
         // 检查文件是否在任何包含的文件夹中
-        return settings.includedFolders.some(folder => {
+        const result = settings.includedFolders.some(folder => {
             // 规范化文件夹路径，确保它们以 / 结尾
             const normalizedFolder = this.normalizePath(folder);
             return filePath.startsWith(normalizedFolder);
         });
+        
+        return result;
     }
 
     /**
-     * 获取文件所在的路径（不包括文件名）
+     * 获取文件的路径（不包括文件名）
      * @param file 文件对象
-     * @returns 文件所在的路径
+     * @returns 文件的路径
      */
     private static getFilePath(file: TFile): string {
-        const fullPath = file.path;
-        const lastSlashIndex = fullPath.lastIndexOf('/');
+        // 获取文件路径
+        const filePath = file.path;
         
+        // 查找最后一个 / 的位置
+        const lastSlashIndex = filePath.lastIndexOf('/');
+        
+        // 如果找不到 /，则文件位于根目录，返回空字符串
         if (lastSlashIndex === -1) {
-            // 文件在根目录
             return '';
         }
         
-        // 返回路径，并确保它以 / 结尾
-        return this.normalizePath(fullPath.substring(0, lastSlashIndex));
+        // 返回文件路径的目录部分
+        return filePath.substring(0, lastSlashIndex + 1);
     }
-
+    
     /**
-     * 规范化路径，确保它以 / 结尾
-     * @param path 要规范化的路径
+     * 规范化路径，确保以 / 结尾
+     * @param path 路径
      * @returns 规范化后的路径
      */
     private static normalizePath(path: string): string {
-        if (path === '') {
+        // 如果路径为空，返回空字符串
+        if (!path) {
             return '';
         }
         
+        // 确保路径以 / 结尾
         return path.endsWith('/') ? path : path + '/';
     }
 } 

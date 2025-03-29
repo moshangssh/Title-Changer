@@ -19,32 +19,48 @@ export class CacheManager {
      */
     constructor(settings: TitleChangerSettings) {
         this.settings = settings;
+        console.log('Title Changer: 初始化完成');
+    }
+    
+    /**
+     * 记录当前设置
+     */
+    private logCurrentSettings(): void {
+        // 移除冗余的设置记录，仅在调试模式下记录
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Title Changer: 当前设置:', {
+                regexPattern: this.settings.regexPattern,
+                folderRestrictionEnabled: this.settings.folderRestrictionEnabled,
+                includedFolders: this.settings.folderRestrictionEnabled ? this.settings.includedFolders : '未启用'
+            });
+        }
     }
     
     /**
      * 更新设置
-     * @param newSettings 新的插件设置
+     * @param newSettings 新的设置
      */
     updateSettings(newSettings: TitleChangerSettings): void {
-        // 如果正则表达式或文件夹设置发生变化，清空缓存
+        // 检查设置是否变化
         if (
             this.settings.regexPattern !== newSettings.regexPattern ||
             this.settings.folderRestrictionEnabled !== newSettings.folderRestrictionEnabled ||
             JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders)
         ) {
+            console.log('Title Changer: 设置已更新，清空缓存');
             this.clearCache();
         }
         
         this.settings = newSettings;
+        this.logCurrentSettings();
     }
     
     /**
-     * 获取文件的显示标题
-     * @param file 文件对象
-     * @returns 显示标题，如果不应更改则返回 null
+     * 处理文件，获取显示的标题
+     * @param file 要处理的文件
+     * @returns 显示的标题，如果不应该更改则返回 null
      */
-    getDisplayTitle(file: TFile): string | null {
-        // 获取文件的唯一 ID
+    processFile(file: TFile): string | null {
         const fileId = file.path;
         
         // 如果缓存中存在，直接返回
@@ -59,8 +75,8 @@ export class CacheManager {
             return null;
         }
         
-        // 处理文件标题
-        const displayTitle = TitleProcessor.extractDisplayTitle(file, this.settings);
+        // 处理文件，获取显示标题
+        const displayTitle = TitleProcessor.processFile(file, this.settings);
         
         // 缓存结果
         this.cache.set(fileId, displayTitle);
@@ -72,14 +88,19 @@ export class CacheManager {
      * 清空缓存
      */
     clearCache(): void {
+        const cacheSize = this.cache.size;
         this.cache.clear();
+        if (cacheSize > 0) {
+            console.log(`Title Changer: 已清空 ${cacheSize} 条缓存记录`);
+        }
     }
     
     /**
-     * 移除单个文件的缓存
+     * 使指定文件的缓存失效
      * @param file 要移除缓存的文件
      */
     invalidateFile(file: TFile): void {
-        this.cache.delete(file.path);
+        const fileId = file.path;
+        this.cache.delete(fileId);
     }
 } 
