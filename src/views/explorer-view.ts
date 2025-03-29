@@ -386,7 +386,6 @@ export class ExplorerView {
                 // 如果有自定义显示标题，更新显示
                 if (displayTitle) {
                     element.textContent = displayTitle;
-                    element.classList.add('title-changer-modified');
                 }
             }
         });
@@ -501,14 +500,12 @@ export class ExplorerView {
         // 如果有自定义显示标题，更新显示
         if (displayTitle) {
             titleEl.textContent = displayTitle;
-            titleEl.classList.add('title-changer-modified');
         } else {
             // 恢复原始文件名
             const originalText = this.originalDisplayText.get(titleEl);
             if (titleEl.textContent !== originalText) {
                 titleEl.textContent = originalText !== undefined ? originalText : file.basename;
             }
-            titleEl.classList.remove('title-changer-modified');
         }
     }
     
@@ -540,21 +537,29 @@ export class ExplorerView {
      * 恢复所有原始文件名
      */
     private restoreOriginalFilenames(): void {
-        // 查找所有被修改的文件名元素
-        const modifiedElements = document.querySelectorAll('.title-changer-modified');
-        
         // 记录恢复数量
         let restoreCount = 0;
         
-        // 恢复每个元素的原始文本
-        modifiedElements.forEach(element => {
-            const originalText = this.originalDisplayText.get(element);
-            if (originalText) {
-                element.textContent = originalText;
-                element.classList.remove('title-changer-modified');
-                restoreCount++;
-            }
-        });
+        // 由于我们不再使用类来标记修改过的元素，
+        // 我们需要手动遍历originalDisplayText中的所有元素
+        // 注意：WeakMap不可迭代，但我们可以在DOM中查找所有可能的元素
+        
+        // 查找所有文件浏览器
+        const fileExplorers = this.getFileExplorers();
+        if (fileExplorers && fileExplorers.length > 0) {
+            fileExplorers.forEach(explorer => {
+                // 查找所有可能包含文件名的元素
+                const elements = explorer.querySelectorAll('.nav-file-title-content, .tree-item-inner, [data-path-inner-text], span, div');
+                
+                elements.forEach(element => {
+                    const originalText = this.originalDisplayText.get(element);
+                    if (originalText) {
+                        element.textContent = originalText;
+                        restoreCount++;
+                    }
+                });
+            });
+        }
         
         // 清空原始文本存储
         this.originalDisplayText = new WeakMap();
