@@ -1,0 +1,56 @@
+---
+description: 在解决问题或添加功能时遵循最小化变更原则，保持代码架构完整性并确保严格类型检查
+globs: 
+alwaysApply: true
+---
+
+# 最小化变更原则(Minimal Delta)
+
+## 上下文
+
+- 在修复bug或添加新功能时应用
+- 适用于需要保持代码架构一致性的项目
+- 特别适用于TypeScript项目，尤其是Obsidian插件开发
+
+## 关键规则
+
+- 仅修改/添加必要代码，保持原有架构完整性
+- 优先使用现有API方法和工具，特别是Obsidian API
+- 确保类型声明严格遵循TypeScript strict mode
+- 代码变更必须包含:
+  - 问题定位注释（// BUG: xxxx）
+  - 变更影响范围标记（// Affects: xxxx）
+- 新增功能时采用模块化设计，单个模块不超过200行
+- 必须通过`eslint-plugin-obsidian`规则检测
+- 保留并遵循现有JSDoc注释格式
+
+## 示例
+
+<example>
+// BUG: 标题修改后未更新UI显示
+// Affects: fileExplorer.ts, titleService.ts
+
+interface TitleChangeEvent {
+  oldTitle: string;
+  newTitle: string;
+}
+
+// 使用现有事件系统
+this.app.workspace.trigger('title-changed', {
+  oldTitle: prevTitle,
+  newTitle: currentTitle
+});
+</example>
+
+<example type="invalid">
+// 完全重写整个组件而非局部修复
+class CompletelyNewTitleManager {
+  // 创建全新实现而不是使用现有架构
+  // 200+行代码...
+}
+
+// 使用any类型而非严格类型
+function updateTitle(data: any) {
+  // 无问题定位和影响范围标记
+}
+</example> 
