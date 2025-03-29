@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "title-changer",
+	"name": "Title Changer",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"description": "使用正则表达式从文件名中提取特定内容作为显示名称",
+	"author": "YourName",
+	"authorUrl": "https://github.com/YourUsername",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": false
 }

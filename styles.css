@@ -6,3 +6,18 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+/* 
+ * Title Changer 插件样式 
+ */
+
+/* 将修改过的文件名轻微突出显示 */
+.nav-file-title-content.title-changer-modified {
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* 设置页面样式 */
+.title-changer-settings .setting-item-description {
+    color: var(--text-muted);
+}
