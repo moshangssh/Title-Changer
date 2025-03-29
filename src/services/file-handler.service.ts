@@ -1,4 +1,6 @@
 import { TFile, Vault } from 'obsidian';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import { ExplorerStateService } from './explorer-state.service';
 import { DOMSelectorService } from './dom-selector.service';
@@ -6,12 +8,12 @@ import { DOMSelectorService } from './dom-selector.service';
 /**
  * 文件处理服务，负责处理文件相关操作
  */
+@injectable()
 export class FileHandlerService {
-    private domSelector: DOMSelectorService;
-
-    constructor(private vault: Vault) {
-        this.domSelector = new DOMSelectorService();
-    }
+    constructor(
+        @inject(TYPES.Vault) private vault: Vault,
+        @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService
+    ) {}
 
     /**
      * 通过基本名称查找文件

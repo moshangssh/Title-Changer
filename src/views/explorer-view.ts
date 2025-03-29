@@ -1,5 +1,7 @@
 import { TFile, Events } from 'obsidian';
-import { TitleChangerPlugin } from '../main';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../types/symbols';
+import type { TitleChangerPlugin } from '../main';
 import { DOMSelectorService } from '../services/dom-selector.service';
 import { ExplorerEventsService } from '../services/explorer-events.service';
 import { FileHandlerService } from '../services/file-handler.service';
@@ -9,24 +11,20 @@ import { CacheManager } from '../cache-manager';
 /**
  * 文件浏览器视图，作为各服务的协调器
  */
+@injectable()
 export class ExplorerView {
-    private domSelector: DOMSelectorService;
-    private eventsService: ExplorerEventsService;
-    private fileHandler: FileHandlerService;
-    private stateService: ExplorerStateService;
-    private cacheManager: CacheManager;
-    
     // 更新计时器
     private updateTimer: number | null = null;
     private static readonly UPDATE_INTERVAL = 500;
 
-    constructor(private plugin: TitleChangerPlugin) {
-        this.domSelector = new DOMSelectorService();
-        this.eventsService = new ExplorerEventsService(plugin.app, this.domSelector);
-        this.fileHandler = new FileHandlerService(plugin.app.vault);
-        this.stateService = new ExplorerStateService();
-        this.cacheManager = plugin.cacheManager;
-    }
+    constructor(
+        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService,
+        @inject(TYPES.ExplorerEventsService) private eventsService: ExplorerEventsService,
+        @inject(TYPES.FileHandlerService) private fileHandler: FileHandlerService,
+        @inject(TYPES.ExplorerStateService) private stateService: ExplorerStateService,
+        @inject(TYPES.CacheManager) private cacheManager: CacheManager
+    ) {}
 
     /**
      * 初始化视图

@@ -1,24 +1,25 @@
 import { TFile } from 'obsidian';
-import { TitleChangerSettings } from './settings';
+import { injectable, inject } from 'inversify';
+import { TYPES } from './types/symbols';
+import type { TitleChangerSettings } from './settings';
 import { TitleProcessor } from './utils/title-processor';
 import { FolderChecker } from './utils/folder-checker';
 
 /**
  * 缓存管理器，用于存储和管理文件名处理结果的缓存
  */
+@injectable()
 export class CacheManager {
     // 文件 ID 到显示标题的映射
     private cache: Map<string, string | null> = new Map();
-    
-    // 当前使用的插件设置
-    private settings: TitleChangerSettings;
     
     /**
      * 构造函数
      * @param settings 插件设置
      */
-    constructor(settings: TitleChangerSettings) {
-        this.settings = settings;
+    constructor(
+        @inject(TYPES.Settings) private settings: TitleChangerSettings
+    ) {
         console.log('Title Changer: 初始化完成');
     }
     

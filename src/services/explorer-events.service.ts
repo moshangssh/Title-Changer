@@ -1,16 +1,19 @@
 import { TFile, Events, Workspace, EventRef, App } from 'obsidian';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../types/symbols';
 import { DOMSelectorService } from './dom-selector.service';
 
 /**
  * 负责处理文件浏览器相关事件的服务
  */
+@injectable()
 export class ExplorerEventsService {
     private observers: MutationObserver[] = [];
     private eventRefs: EventRef[] = [];
 
     constructor(
-        private app: App,
-        private domSelector: DOMSelectorService
+        @inject(TYPES.App) private app: App,
+        @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService
     ) {}
 
     /**

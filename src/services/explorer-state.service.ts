@@ -1,4 +1,4 @@
-import { DOMSelectorService } from './dom-selector.service';
+import { injectable } from 'inversify';
 
 /**
  * 用于存储原始文本的WeakMap键值对
@@ -11,6 +11,7 @@ interface ElementTextPair {
 /**
  * 文件浏览器状态服务，负责管理文件浏览器的状态
  */
+@injectable()
 export class ExplorerStateService {
     // 保存原始文件名显示方法
     private originalDisplayText: WeakMap<Element, string> = new WeakMap();

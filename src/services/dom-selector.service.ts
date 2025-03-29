@@ -1,8 +1,10 @@
 import { TFile } from 'obsidian';
+import { injectable } from 'inversify';
 
 /**
  * DOM选择器服务，用于查找和选择文件浏览器中的DOM元素
  */
+@injectable()
 export class DOMSelectorService {
     /**
      * 获取文件浏览器元素

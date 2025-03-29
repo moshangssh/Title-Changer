@@ -11,14 +11,22 @@
     "importHelpers": true,
     "isolatedModules": true,
     "strictNullChecks": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
     "lib": [
       "DOM",
       "ES5",
       "ES6",
       "ES7"
-    ]
+    ],
+    "types": ["node", "jest", "reflect-metadata"],
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": [
-    "**/*.ts"
+    "src/**/*.ts",
+    "tests/**/*.ts"
   ]
 }

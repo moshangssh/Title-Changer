@@ -1,20 +1,24 @@
-import { TitleChangerPlugin } from '../main';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../types/symbols';
+import type { TitleChangerPlugin } from '../main';
 import { ExplorerView } from './explorer-view';
 
 /**
  * 视图管理器，用于协调管理不同视图组件
  */
+@injectable()
 export class ViewManager {
-    private plugin: TitleChangerPlugin;
     private explorerView: ExplorerView;
 
     /**
      * 构造函数
      * @param plugin 插件实例
      */
-    constructor(plugin: TitleChangerPlugin) {
-        this.plugin = plugin;
-        this.explorerView = new ExplorerView(plugin);
+    constructor(
+        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.ExplorerView) explorerView: ExplorerView
+    ) {
+        this.explorerView = explorerView;
     }
 
     /**

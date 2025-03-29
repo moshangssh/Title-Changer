@@ -1,11 +1,14 @@
 import { Plugin } from 'obsidian';
+import { Container } from 'inversify';
 import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './settings';
 import { ViewManager } from './views/view-manager';
 import { CacheManager } from './cache-manager';
+import { TYPES } from './types/symbols';
+import { createContainer } from './inversify.config';
 
 export class TitleChangerPlugin extends Plugin {
     settings: TitleChangerSettings;
-    cacheManager: CacheManager;
+    private container: Container;
     private viewManager: ViewManager;
 
     async onload() {
@@ -14,14 +17,16 @@ export class TitleChangerPlugin extends Plugin {
         // 加载设置
         await this.loadSettings();
 
-        // 初始化缓存管理器
-        this.cacheManager = new CacheManager(this.settings);
+        // 初始化 IoC 容器
+        this.container = createContainer(this);
+
+        // 获取服务实例
+        this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
 
         // 添加设置选项卡
         this.addSettingTab(new TitleChangerSettingTab(this.app, this));
 
         // 初始化视图管理器
-        this.viewManager = new ViewManager(this);
         this.viewManager.initialize();
 
         // 添加命令，刷新所有视图
