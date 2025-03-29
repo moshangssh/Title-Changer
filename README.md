@@ -1,94 +1,78 @@
-# Obsidian Sample Plugin
+# Title Changer
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+一个 Obsidian 插件，使用正则表达式从文件名中提取特定内容作为显示名称。
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## 功能介绍
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Title Changer 允许你通过配置正则表达式，改变 Obsidian 文件浏览器中显示的文件名。这对于使用特定命名约定的用户非常有用，比如：
 
-## First time developing plugins?
+- 将 `20240329_会议记录_客户反馈` 显示为 `客户反馈`
+- 将 `[Project]_TaskName_20240329` 显示为 `TaskName`
+- 将包含元数据的长文件名简化为更易读的显示形式
 
-Quick starting guide for new plugin devs:
+插件使用正则表达式捕获组来提取文件名中的特定部分，并将其显示在文件浏览器中，而不改变实际的文件名。
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## 技术架构
 
-## Releasing new releases
+Title Changer 使用依赖注入(IoC)设计模式和模块化架构，保持代码的可测试性和可维护性：
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+### 核心组件
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- **主插件类** (`TitleChangerPlugin`): 负责初始化插件、加载设置和协调各个服务
+- **设置管理** (`TitleChangerSettings`): 处理用户配置的正则表达式和文件夹限制
+- **视图管理器** (`ViewManager`): 协调不同视图的更新和刷新
+- **缓存管理器** (`CacheManager`): 缓存处理过的文件名结果，提高性能
 
-## Adding your plugin to the community plugin list
+### 服务层
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- **DOM选择器服务** (`DOMSelectorService`): 定位和查找文件浏览器UI元素
+- **浏览器事件服务** (`ExplorerEventsService`): 处理文件和布局变更事件
+- **文件处理服务** (`FileHandlerService`): 应用正则表达式并处理文件名变换
+- **状态管理服务** (`ExplorerStateService`): 跟踪并存储修改过的文件名
 
-## How to use
+### 开发技术
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+- TypeScript 与 ES6+ 特性
+- Obsidian API 集成
+- InversifyJS 依赖注入容器
+- Jest 测试框架
 
-## Manually installing the plugin
+## 安装方法
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+1. 在 Obsidian 中打开设置
+2. 转到"第三方插件"选项卡，并禁用安全模式
+3. 点击"浏览"按钮，搜索"Title Changer"
+4. 安装插件并启用
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+## 使用指南
 
-## Funding URL
+### 基本配置
 
-You can include funding URLs where people who use your plugin can financially support it.
+1. 打开 Obsidian 设置
+2. 找到"Title Changer"选项卡
+3. 设置正则表达式以捕获文件名中你想显示的部分
+   - 默认正则表达式 `.*_([^_]+)$` 会捕获最后一个下划线后的所有内容
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+### 高级设置
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+- **文件夹限制**: 启用后，插件只会在指定的文件夹中应用正则表达式
+- **手动刷新**: 使用命令"刷新文件名显示"强制更新所有视图
 
-If you have multiple URLs, you can also do:
+### 正则表达式示例
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+- `.*_([^_]+)$` - 捕获最后一个下划线后的内容
+- `\[(.*?)\]` - 捕获方括号内的内容
+- `^(?:.*?-)?(.*?)(?:-.*)?$` - 捕获第一个和最后一个短横线之间的内容
 
-## API Documentation
+## 贡献指南
 
-See https://github.com/obsidianmd/obsidian-api
+欢迎对 Title Changer 进行贡献。开发前准备：
+
+1. 克隆此仓库
+2. 运行 `npm install` 安装依赖
+3. 运行 `npm run dev` 启动开发模式
+4. 测试更改，建议使用 `npm test` 运行单元测试
+
+## 许可证
+
+本项目基于 MIT 许可证开源 🔍
