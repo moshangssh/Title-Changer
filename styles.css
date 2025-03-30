@@ -15,3 +15,15 @@ If your plugin does not need CSS, delete this file.
 .title-changer-settings .setting-item-description {
     color: var(--text-muted);
 }
+
+/* 编辑器内部链接样式 */
+.title-changer-link {
+    color: var(--link-color);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.title-changer-link:hover {
+    text-decoration: none;
+    color: var(--link-color-hover, var(--link-color));
+}

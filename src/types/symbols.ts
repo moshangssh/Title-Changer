@@ -11,6 +11,7 @@ export const TYPES = {
 
   // 视图
   ExplorerView: Symbol.for("ExplorerView"),
+  EditorLinkView: Symbol.for("EditorLinkView"),
 
   // 服务
   FileHandlerService: Symbol.for("FileHandlerService"),

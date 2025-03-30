@@ -2,6 +2,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import { ExplorerView } from './explorer-view';
+import { EditorLinkView } from './editor-view';
 
 /**
  * 视图管理器，用于协调管理不同视图组件
@@ -9,6 +10,7 @@ import { ExplorerView } from './explorer-view';
 @injectable()
 export class ViewManager {
     private explorerView: ExplorerView;
+    private editorLinkView: EditorLinkView;
 
     /**
      * 构造函数
@@ -16,9 +18,11 @@ export class ViewManager {
      */
     constructor(
         @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
-        @inject(TYPES.ExplorerView) explorerView: ExplorerView
+        @inject(TYPES.ExplorerView) explorerView: ExplorerView,
+        @inject(TYPES.EditorLinkView) editorLinkView: EditorLinkView
     ) {
         this.explorerView = explorerView;
+        this.editorLinkView = editorLinkView;
     }
 
     /**
@@ -26,6 +30,7 @@ export class ViewManager {
      */
     initialize(): void {
         this.explorerView.initialize();
+        this.editorLinkView.initialize();
     }
 
     /**
@@ -33,6 +38,7 @@ export class ViewManager {
      */
     unload(): void {
         this.explorerView.unload();
+        this.editorLinkView.unload();
     }
 
     /**
@@ -40,6 +46,7 @@ export class ViewManager {
      */
     updateAllViews(): void {
         this.explorerView.updateView();
+        this.editorLinkView.updateView();
     }
 
     /**

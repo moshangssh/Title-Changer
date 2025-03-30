@@ -7,6 +7,7 @@ import { TitleChangerSettings } from "./settings";
 import { CacheManager } from "./cache-manager";
 import { ViewManager } from "./views/view-manager";
 import { ExplorerView } from "./views/explorer-view";
+import { EditorLinkView } from "./views/editor-view";
 import { FileHandlerService } from "./services/file-handler.service";
 import { DOMSelectorService } from "./services/dom-selector.service";
 import { ExplorerStateService } from "./services/explorer-state.service";
@@ -32,6 +33,7 @@ export const createContainer = (plugin: TitleChangerPlugin): Container => {
     
     // 注册视图（单例）
     container.bind<ExplorerView>(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();
+    container.bind<EditorLinkView>(TYPES.EditorLinkView).to(EditorLinkView).inSingletonScope();
     
     // 注册服务（单例）
     container.bind<FileHandlerService>(TYPES.FileHandlerService).to(FileHandlerService).inSingletonScope();
