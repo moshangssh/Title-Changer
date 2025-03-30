@@ -2,14 +2,15 @@ import { TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from './types/symbols';
 import type { TitleChangerSettings } from './settings';
-import { TitleProcessor } from './utils/title-processor';
 import { FolderChecker } from './utils/folder-checker';
+import { TitleProcessor } from './utils/title-processor';
+import type { ICacheManager } from './types/obsidian-extensions';
 
 /**
  * 缓存管理器，用于存储和管理文件名处理结果的缓存
  */
 @injectable()
-export class CacheManager {
+export class CacheManager implements ICacheManager {
     // 文件 ID 到显示标题的映射
     private cache: Map<string, string | null> = new Map();
     
@@ -86,14 +87,10 @@ export class CacheManager {
     }
     
     /**
-     * 清空缓存
+     * 清除所有缓存
      */
     clearCache(): void {
-        const cacheSize = this.cache.size;
         this.cache.clear();
-        if (cacheSize > 0) {
-            console.log(`Title Changer: 已清空 ${cacheSize} 条缓存记录`);
-        }
     }
     
     /**

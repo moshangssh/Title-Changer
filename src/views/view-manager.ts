@@ -1,14 +1,15 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
-import { ExplorerView } from './explorer-view';
-import { EditorLinkView } from './editor-view';
+import type { ExplorerView } from './explorer-view';
+import type { EditorLinkView } from './editor-view';
+import type { IViewManager } from '../types/obsidian-extensions';
 
 /**
- * 视图管理器，用于协调管理不同视图组件
+ * 视图管理器，负责管理和协调所有视图
  */
 @injectable()
-export class ViewManager {
+export class ViewManager implements IViewManager {
     private explorerView: ExplorerView;
     private editorLinkView: EditorLinkView;
 
