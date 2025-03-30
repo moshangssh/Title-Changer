@@ -35,6 +35,47 @@ export class DOMSelectorService implements IDOMSelectorService {
     };
 
     /**
+     * 安全地查询DOM元素
+     */
+    private safeQuerySelector<T extends Element>(
+        container: ParentNode,
+        selector: string,
+        isNodeList = false
+    ): T[] {
+        try {
+            if (isNodeList) {
+                return Array.from(container.querySelectorAll(selector)) as T[];
+            }
+            const element = container.querySelector(selector) as T;
+            return element ? [element] : [];
+        } catch (error) {
+            this.logger.error('Title Changer: DOM查询出错', {
+                error,
+                selector,
+                container
+            });
+            return [];
+        }
+    }
+
+    /**
+     * 安全地获取元素属性
+     */
+    private safeGetAttribute(element: Element | null, attribute: string): string | null {
+        try {
+            if (!element) return null;
+            return element.getAttribute(attribute);
+        } catch (error) {
+            this.logger.error('Title Changer: 获取属性时出错', {
+                error,
+                element,
+                attribute
+            });
+            return null;
+        }
+    }
+
+    /**
      * 获取文件浏览器元素
      */
     getFileExplorers(): HTMLElement[] {
@@ -42,16 +83,18 @@ export class DOMSelectorService implements IDOMSelectorService {
         
         try {
             // 1. 查找标准的文件浏览器容器
-            const standardExplorer = document.querySelector(this.standardSelectors.fileExplorer) as HTMLElement;
-            if (standardExplorer) {
-                fileExplorers.push(standardExplorer);
-            }
+            const standardExplorers = this.safeQuerySelector<HTMLElement>(
+                document,
+                this.standardSelectors.fileExplorer
+            );
+            fileExplorers.push(...standardExplorers);
             
             // 2. 查找可能的替代文件浏览器
-            const alternativeExplorers = document.querySelectorAll(
-                this.standardSelectors.alternativeExplorers.join(', ')
-            ) as NodeListOf<HTMLElement>;
-            
+            const alternativeExplorers = this.safeQuerySelector<HTMLElement>(
+                document,
+                this.standardSelectors.alternativeExplorers.join(', '),
+                true
+            );
             alternativeExplorers.forEach(explorer => {
                 if (!fileExplorers.includes(explorer)) {
                     fileExplorers.push(explorer);
@@ -60,13 +103,12 @@ export class DOMSelectorService implements IDOMSelectorService {
             
             // 3. 作为最后的尝试，查找任何可能包含文件项的容器
             if (fileExplorers.length === 0) {
-                const fallbackExplorers = document.querySelectorAll(
-                    this.standardSelectors.fallbackExplorers.join(', ')
-                ) as NodeListOf<HTMLElement>;
-                
-                fallbackExplorers.forEach(explorer => {
-                    fileExplorers.push(explorer);
-                });
+                const fallbackExplorers = this.safeQuerySelector<HTMLElement>(
+                    document,
+                    this.standardSelectors.fallbackExplorers.join(', '),
+                    true
+                );
+                fileExplorers.push(...fallbackExplorers);
             }
         } catch (error) {
             this.logger.error('Title Changer: 获取文件浏览器时出错', {
@@ -84,7 +126,7 @@ export class DOMSelectorService implements IDOMSelectorService {
     getFileItems(explorer: HTMLElement): HTMLElement[] {
         try {
             for (const selector of this.standardSelectors.fileItems) {
-                const items = Array.from(explorer.querySelectorAll(selector)) as HTMLElement[];
+                const items = this.safeQuerySelector<HTMLElement>(explorer, selector, true);
                 if (items.length > 0) {
                     return items;
                 }
@@ -104,12 +146,22 @@ export class DOMSelectorService implements IDOMSelectorService {
      */
     getTextElements(container: HTMLElement): Element[] {
         try {
-            return Array.from(container.querySelectorAll('*')).filter(el => {
-                return el.textContent?.trim() && 
-                       !el.hasAttribute('contenteditable') &&
-                       !(el instanceof HTMLButtonElement) &&
-                       !(el instanceof HTMLInputElement) &&
-                       !(el instanceof HTMLTextAreaElement);
+            const elements = this.safeQuerySelector<Element>(container, '*', true);
+            return elements.filter(el => {
+                try {
+                    const text = el.textContent?.trim();
+                    return text && 
+                           !this.safeGetAttribute(el, 'contenteditable') &&
+                           !(el instanceof HTMLButtonElement) &&
+                           !(el instanceof HTMLInputElement) &&
+                           !(el instanceof HTMLTextAreaElement);
+                } catch (error) {
+                    this.logger.error('Title Changer: 过滤文本元素时出错', {
+                        error,
+                        element: el
+                    });
+                    return false;
+                }
             });
         } catch (error) {
             this.logger.error('Title Changer: 获取文本元素时出错', {
@@ -126,9 +178,9 @@ export class DOMSelectorService implements IDOMSelectorService {
     getTitleElement(fileItem: HTMLElement): Element | null {
         try {
             for (const selector of this.standardSelectors.titleElements) {
-                const el = fileItem.querySelector(selector);
-                if (el) {
-                    return el;
+                const elements = this.safeQuerySelector<Element>(fileItem, selector);
+                if (elements.length > 0) {
+                    return elements[0];
                 }
             }
         } catch (error) {
@@ -147,7 +199,7 @@ export class DOMSelectorService implements IDOMSelectorService {
     getFilePath(fileItem: HTMLElement): string | null {
         try {
             // 1. 直接从当前元素获取
-            let filePath = fileItem.getAttribute('data-path');
+            let filePath = this.safeGetAttribute(fileItem, 'data-path');
             
             // 2. 如果当前元素没有，尝试从父元素获取
             if (!filePath) {
@@ -166,7 +218,8 @@ export class DOMSelectorService implements IDOMSelectorService {
             
             // 5. 尝试使用title或aria-label属性
             if (!filePath) {
-                filePath = fileItem.getAttribute('title') || fileItem.getAttribute('aria-label');
+                filePath = this.safeGetAttribute(fileItem, 'title') || 
+                          this.safeGetAttribute(fileItem, 'aria-label');
             }
             
             return filePath;
@@ -183,15 +236,22 @@ export class DOMSelectorService implements IDOMSelectorService {
      * 从父元素获取文件路径
      */
     private getFilePathFromParent(element: HTMLElement): string | null {
-        let parent = element.parentElement;
-        let searchDepth = 0;
-        const maxSearchDepth = 3;
-        
-        while (parent && searchDepth < maxSearchDepth) {
-            const path = parent.getAttribute('data-path');
-            if (path) return path;
-            parent = parent.parentElement;
-            searchDepth++;
+        try {
+            let parent = element.parentElement;
+            let searchDepth = 0;
+            const maxSearchDepth = 3;
+            
+            while (parent && searchDepth < maxSearchDepth) {
+                const path = this.safeGetAttribute(parent, 'data-path');
+                if (path) return path;
+                parent = parent.parentElement;
+                searchDepth++;
+            }
+        } catch (error) {
+            this.logger.error('Title Changer: 从父元素获取文件路径时出错', {
+                error,
+                element
+            });
         }
         
         return null;
@@ -201,18 +261,32 @@ export class DOMSelectorService implements IDOMSelectorService {
      * 从子元素获取文件路径
      */
     private getFilePathFromChild(element: HTMLElement): string | null {
-        const childWithPath = element.querySelector('[data-path]');
-        return childWithPath?.getAttribute('data-path') ?? null;
+        try {
+            const childWithPath = this.safeQuerySelector<Element>(element, '[data-path]')[0];
+            return this.safeGetAttribute(childWithPath, 'data-path');
+        } catch (error) {
+            this.logger.error('Title Changer: 从子元素获取文件路径时出错', {
+                error,
+                element
+            });
+            return null;
+        }
     }
 
     /**
      * 从链接元素获取文件路径
      */
     private getFilePathFromLink(element: HTMLElement): string | null {
-        const linkEl = element.querySelector('a.internal-link');
-        if (!linkEl) return null;
-        
-        const href = linkEl.getAttribute('href');
-        return href ? decodeURIComponent(href).replace(/^\//, '') : null;
+        try {
+            const linkEl = this.safeQuerySelector<Element>(element, 'a.internal-link')[0];
+            const href = this.safeGetAttribute(linkEl, 'href');
+            return href ? decodeURIComponent(href).replace(/^\//, '') : null;
+        } catch (error) {
+            this.logger.error('Title Changer: 从链接获取文件路径时出错', {
+                error,
+                element
+            });
+            return null;
+        }
     }
 } 

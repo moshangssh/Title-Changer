@@ -17,5 +17,7 @@ export const TYPES = {
   FileHandlerService: Symbol.for("FileHandlerService"),
   DOMSelectorService: Symbol.for("DOMSelectorService"),
   ExplorerStateService: Symbol.for("ExplorerStateService"),
-  ExplorerEventsService: Symbol.for("ExplorerEventsService")
+  ExplorerEventsService: Symbol.for("ExplorerEventsService"),
+  Logger: Symbol.for("Logger"),
+  EditorExtensionManager: Symbol.for("EditorExtensionManager")
 }; 

@@ -1,28 +1,24 @@
 import { MarkdownView, Plugin, TFile, Workspace } from 'obsidian';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
-import { RangeSetBuilder } from '@codemirror/state';
+import { RangeSetBuilder, Annotation } from '@codemirror/state';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import type { TitleChangerPlugin } from '../main';
+import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager } from '../types/obsidian-extensions';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
  */
 @injectable()
 export class EditorLinkView {
-    // 存储注册的编辑器扩展，用于卸载
-    private registeredExtensions: Symbol[] = [];
-    private plugin: TitleChangerPlugin;
-    private cacheManager: CacheManager;
+    private registeredExtensions: EditorExtensionSymbol[] = [];
 
     constructor(
-        @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
-        @inject(TYPES.CacheManager) cacheManager: CacheManager
-    ) {
-        this.plugin = plugin;
-        this.cacheManager = cacheManager;
-    }
+        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.CacheManager) private cacheManager: CacheManager,
+        @inject(TYPES.EditorExtensionManager) private extensionManager: IEditorExtensionManager
+    ) {}
 
     /**
      * 初始化编辑视图
@@ -30,6 +26,20 @@ export class EditorLinkView {
     initialize(): void {
         // 注册编辑器扩展
         this.registerEditorExtension();
+        
+        // 注册全局事件委托
+        this.plugin.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+            const target = evt.target as HTMLElement;
+            if (target.classList.contains('title-changer-link')) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                
+                const linkText = target.dataset.linktext;
+                if (linkText) {
+                    this.plugin.app.workspace.openLinkText(linkText, '', false);
+                }
+            }
+        });
     }
 
     /**
@@ -37,8 +47,8 @@ export class EditorLinkView {
      */
     unload(): void {
         // 移除所有注册的扩展
-        this.registeredExtensions.forEach(extension => {
-            (this.plugin.app.workspace as any).unregisterEditorExtension(extension);
+        this.registeredExtensions.forEach(symbol => {
+            this.extensionManager.unregisterExtension(symbol);
         });
         this.registeredExtensions = [];
     }
@@ -47,8 +57,7 @@ export class EditorLinkView {
      * 更新视图
      */
     updateView(): void {
-        // 触发编辑器刷新
-        this.plugin.app.workspace.updateOptions();
+        this.extensionManager.refreshAll();
     }
 
     /**
@@ -57,6 +66,9 @@ export class EditorLinkView {
      */
     private registerEditorExtension(): void {
         const self = this;
+        // 创建设置变更注解
+        const settingsChangedAnnotation = Annotation.define<null>();
+
         // 创建插件
         const linkTitlePlugin = ViewPlugin.fromClass(
             class {
@@ -67,70 +79,107 @@ export class EditorLinkView {
                 }
 
                 update(update: ViewUpdate) {
-                    if (update.docChanged || update.viewportChanged) {
-                        this.decorations = this.buildDecorations(update.view);
+                    try {
+                        if (update.docChanged || 
+                            update.viewportChanged || 
+                            update.transactions.some(tr => tr.annotation(settingsChangedAnnotation))) {
+                            this.decorations = this.buildDecorations(update.view);
+                        }
+                    } catch (error) {
+                        console.error('更新装饰时发生错误:', error);
+                        // 保持现有装饰，避免视图崩溃
+                        return;
                     }
                 }
 
                 buildDecorations(view: EditorView): DecorationSet {
-                    const builder = new RangeSetBuilder<Decoration>();
-                    const { doc } = view.state;
-                    
-                    // 定义双链正则表达式
-                    const wikiLinkRegex = /\[\[([^\]|#]+)(?:\|([^\]#]+))?(?:#([^\]|]+))?\]\]/g;
-                    
-                    // 遍历文档中的所有匹配项
-                    for (let i = 0; i < doc.lines; i++) {
-                        const line = doc.line(i + 1);
-                        const lineText = line.text;
+                    try {
+                        const builder = new RangeSetBuilder<Decoration>();
+                        const { doc } = view.state;
+                        const { from, to } = view.viewport;
                         
-                        let match;
-                        while ((match = wikiLinkRegex.exec(lineText)) !== null) {
-                            const originalFileName = match[1];
-                            // 如果已有显示文本 (例如 [[文件名|显示文本]]) 则跳过
-                            if (match[2]) continue;
+                        // 添加缓冲区以提高滚动性能
+                        const bufferSize = 1000;
+                        const processFrom = Math.max(0, from - bufferSize);
+                        const processTo = Math.min(doc.length, to + bufferSize);
+                        
+                        // 定义双链正则表达式
+                        const wikiLinkRegex = /\[\[([^\]|#]+)(?:\|([^\]#]+))?(?:#([^\]|]+))?\]\]/g;
+                        
+                        let pos = processFrom;
+                        while (pos <= processTo) {
+                            const line = doc.lineAt(pos);
+                            const lineText = line.text;
                             
-                            // 从缓存获取显示标题
-                            const displayTitle = this.getDisplayTitle(originalFileName);
-                            
-                            if (displayTitle && displayTitle !== originalFileName) {
-                                const fullMatch = match[0];
-                                const matchStart = line.from + match.index;
-                                const linkTextStart = matchStart + 2; // 跳过 [[ 
-                                const linkTextEnd = linkTextStart + originalFileName.length;
+                            let match;
+                            while ((match = wikiLinkRegex.exec(lineText)) !== null) {
+                                const originalFileName = match[1];
+                                // 如果已有显示文本则跳过
+                                if (match[2]) continue;
                                 
-                                // 创建装饰，替换原文件名为显示标题，但保留点击功能
-                                builder.add(
-                                    linkTextStart, 
-                                    linkTextEnd, 
-                                    Decoration.replace({
-                                        widget: new LinkTitleWidget(displayTitle, originalFileName, self.plugin)
-                                    })
-                                );
+                                try {
+                                    // 从缓存获取显示标题
+                                    const displayTitle = this.getDisplayTitle(originalFileName);
+                                    
+                                    if (displayTitle && displayTitle !== originalFileName) {
+                                        const matchStart = line.from + match.index;
+                                        const linkTextStart = matchStart + 2; // 跳过 [[ 
+                                        const linkTextEnd = linkTextStart + originalFileName.length;
+                                        
+                                        builder.add(
+                                            linkTextStart, 
+                                            linkTextEnd, 
+                                            Decoration.replace({
+                                                widget: new LinkTitleWidget(displayTitle, originalFileName, self.plugin)
+                                            })
+                                        );
+                                    }
+                                } catch (error) {
+                                    console.error(`处理链接 "${originalFileName}" 时发生错误:`, error);
+                                    continue;
+                                }
                             }
+                            pos = line.to + 1;
                         }
+                        
+                        return builder.finish();
+                    } catch (error) {
+                        console.error('构建装饰时发生错误:', error);
+                        return Decoration.none;
                     }
-                    
-                    return builder.finish();
                 }
 
                 getDisplayTitle(fileName: string): string {
-                    // 尝试查找对应的文件
-                    const file = this.findFile(fileName);
-                    if (!file) return fileName;
-                    
-                    // 使用缓存管理器获取显示标题
-                    return this.getCachedDisplayTitle(file) || fileName;
+                    try {
+                        // 尝试查找对应的文件
+                        const file = this.findFile(fileName);
+                        if (!file) return fileName;
+                        
+                        // 使用缓存管理器获取显示标题
+                        return this.getCachedDisplayTitle(file) || fileName;
+                    } catch (error) {
+                        console.error(`获取显示标题时发生错误: ${error.message}`, error);
+                        return fileName;
+                    }
                 }
 
                 findFile(fileName: string): TFile | null {
-                    // 查找文件
-                    const files = self.plugin.app.vault.getMarkdownFiles();
-                    return files.find(file => file.basename === fileName || file.path === fileName) || null;
+                    try {
+                        const files = self.plugin.app.vault.getMarkdownFiles();
+                        return files.find(file => file.basename === fileName || file.path === fileName) || null;
+                    } catch (error) {
+                        console.error(`查找文件时发生错误: ${error.message}`, error);
+                        return null;
+                    }
                 }
 
                 getCachedDisplayTitle(file: TFile): string | null {
-                    return self.cacheManager.processFile(file);
+                    try {
+                        return self.cacheManager.processFile(file);
+                    } catch (error) {
+                        console.error(`获取缓存标题时发生错误: ${error.message}`, error);
+                        return null;
+                    }
                 }
             },
             {
@@ -139,8 +188,8 @@ export class EditorLinkView {
         );
 
         // 注册扩展
-        const extension = (this.plugin.app.workspace as any).registerEditorExtension([linkTitlePlugin]);
-        this.registeredExtensions.push(extension);
+        const symbol = this.extensionManager.registerExtension(linkTitlePlugin);
+        this.registeredExtensions.push(symbol);
     }
 }
 
@@ -161,33 +210,10 @@ class LinkTitleWidget extends WidgetType {
         span.textContent = this.title;
         span.className = 'title-changer-link cm-hmd-internal-link';
         
-        // 添加原始文件名作为属性，便于点击处理
-        span.dataset.originalLink = this.originalFileName;
-        
-        // 添加点击事件代理
-        span.addEventListener('click', (event) => {
-            // 阻止当前事件，避免重复处理
-            event.preventDefault();
-            event.stopPropagation();
-            
-            // 模拟原始链接点击，让 Obsidian 处理跳转
-            this.dispatchLinkClick(this.originalFileName);
-        });
+        // 使用 data 属性存储链接信息
+        span.dataset.linktext = this.originalFileName;
         
         return span;
-    }
-    
-    // 触发 Obsidian 的内部链接点击
-    private dispatchLinkClick(linkText: string) {
-        // 查找对应的文件
-        const file = this.plugin.app.vault.getMarkdownFiles().find(f => 
-            f.basename === linkText || f.path === linkText
-        );
-        
-        if (file) {
-            // 打开文件
-            this.plugin.app.workspace.openLinkText(file.path, '', false);
-        }
     }
 
     ignoreEvent() {

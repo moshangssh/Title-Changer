@@ -1,5 +1,6 @@
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { Workspace, WorkspaceLeaf, MarkdownView, TFile } from 'obsidian';
+import { ViewPlugin } from '@codemirror/view';
 
 /**
  * 扩展的 Workspace 接口，包含编辑器扩展相关方法
@@ -74,4 +75,42 @@ export interface IDOMSelectorService {
     getTextElements(container: HTMLElement): Element[];
     getTitleElement(fileItem: HTMLElement): Element | null;
     getFilePath(fileItem: HTMLElement): string | null;
+}
+
+/**
+ * 编辑器扩展类型
+ */
+export type EditorExtensionType = ViewPlugin<any> | any;
+
+/**
+ * 编辑器扩展标识符
+ */
+export type EditorExtensionSymbol = Symbol;
+
+/**
+ * 编辑器扩展管理器接口
+ */
+export interface IEditorExtensionManager {
+    /**
+     * 注册编辑器扩展
+     * @param extension 要注册的扩展
+     * @returns 扩展标识符
+     */
+    registerExtension(extension: EditorExtensionType): EditorExtensionSymbol;
+
+    /**
+     * 注销编辑器扩展
+     * @param symbol 扩展标识符
+     */
+    unregisterExtension(symbol: EditorExtensionSymbol): void;
+
+    /**
+     * 注销所有扩展
+     */
+    unregisterAll(): void;
+
+    /**
+     * 刷新所有扩展
+     */
+    refreshAll(): void;
 } 

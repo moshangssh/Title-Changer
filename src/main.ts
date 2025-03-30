@@ -1,10 +1,17 @@
-import { Plugin } from 'obsidian';
+import { App, Plugin, Vault } from 'obsidian';
 import { Container } from 'inversify';
 import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './settings';
 import { ViewManager } from './views/view-manager';
 import { CacheManager } from './cache-manager';
 import { TYPES } from './types/symbols';
 import { createContainer } from './inversify.config';
+import { Logger } from './utils/logger';
+import { ExplorerView } from './views/explorer-view';
+import { EditorLinkView } from './views/editor-view';
+import { FileHandlerService } from './services/file-handler.service';
+import { DOMSelectorService } from './services/dom-selector.service';
+import { ExplorerStateService } from './services/explorer-state.service';
+import { ExplorerEventsService } from './services/explorer-events.service';
 
 export class TitleChangerPlugin extends Plugin {
     settings: TitleChangerSettings;
@@ -18,7 +25,7 @@ export class TitleChangerPlugin extends Plugin {
         await this.loadSettings();
 
         // 初始化 IoC 容器
-        this.container = createContainer(this);
+        this.initializeContainer();
 
         // 获取服务实例
         this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
@@ -59,5 +66,9 @@ export class TitleChangerPlugin extends Plugin {
         if (this.viewManager) {
             this.viewManager.onSettingsChanged();
         }
+    }
+
+    private initializeContainer(): void {
+        this.container = createContainer(this);
     }
 } 
