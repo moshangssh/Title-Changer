@@ -11,94 +11,117 @@ import type { ICacheManager } from './types/obsidian-extensions';
  */
 @injectable()
 export class CacheManager implements ICacheManager {
-    // 文件 ID 到显示标题的映射
-    private cache: Map<string, string | null> = new Map();
-    
-    /**
-     * 构造函数
-     * @param settings 插件设置
-     */
+    private readonly titleCache: Map<string, string | null> = new Map();
+    private readonly logger = console;
+
     constructor(
         @inject(TYPES.Settings) private settings: TitleChangerSettings
     ) {
-        console.log('Title Changer: 初始化完成');
+        this.logger.log('Title Changer: 缓存管理器初始化完成');
     }
-    
+
     /**
-     * 记录当前设置
+     * 记录当前设置状态
      */
-    private logCurrentSettings(): void {
-        // 移除冗余的设置记录，仅在调试模式下记录
+    private logSettingsState(): void {
         if (process.env.NODE_ENV === 'development') {
-            console.log('Title Changer: 当前设置:', {
+            this.logger.debug('Title Changer: 当前设置状态:', {
                 regexPattern: this.settings.regexPattern,
                 folderRestrictionEnabled: this.settings.folderRestrictionEnabled,
-                includedFolders: this.settings.folderRestrictionEnabled ? this.settings.includedFolders : '未启用'
+                includedFolders: this.settings.folderRestrictionEnabled 
+                    ? this.settings.includedFolders 
+                    : '未启用文件夹限制'
             });
         }
     }
-    
+
     /**
-     * 更新设置
-     * @param newSettings 新的设置
+     * 更新设置并处理缓存
      */
     updateSettings(newSettings: TitleChangerSettings): void {
-        // 检查设置是否变化
-        if (
-            this.settings.regexPattern !== newSettings.regexPattern ||
-            this.settings.folderRestrictionEnabled !== newSettings.folderRestrictionEnabled ||
-            JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders)
-        ) {
-            console.log('Title Changer: 设置已更新，清空缓存');
-            this.clearCache();
+        try {
+            const hasSettingsChanged = this.hasSettingsChanged(newSettings);
+            if (hasSettingsChanged) {
+                this.logger.info('Title Changer: 检测到设置变更，清空缓存');
+                this.clearCache();
+            }
+
+            this.settings = newSettings;
+            this.logSettingsState();
+        } catch (error) {
+            this.logger.error('Title Changer: 更新设置时发生错误', error);
         }
-        
-        this.settings = newSettings;
-        this.logCurrentSettings();
     }
-    
+
     /**
-     * 处理文件，获取显示的标题
-     * @param file 要处理的文件
-     * @returns 显示的标题，如果不应该更改则返回 null
+     * 处理文件并返回显示标题
      */
     processFile(file: TFile): string | null {
-        const fileId = file.path;
-        
-        // 如果缓存中存在，直接返回
-        if (this.cache.has(fileId)) {
-            return this.cache.get(fileId) ?? null;
-        }
-        
-        // 检查文件是否应该应用标题修改
-        if (!FolderChecker.shouldApplyToFile(file, this.settings)) {
-            // 如果不应该应用，缓存 null 并返回
-            this.cache.set(fileId, null);
+        try {
+            const fileId = file.path;
+            
+            if (this.titleCache.has(fileId)) {
+                return this.titleCache.get(fileId) ?? null;
+            }
+
+            if (!FolderChecker.shouldApplyToFile(file, this.settings)) {
+                this.titleCache.set(fileId, null);
+                return null;
+            }
+
+            const displayTitle = TitleProcessor.processFile(file, this.settings);
+            this.titleCache.set(fileId, displayTitle);
+            return displayTitle;
+        } catch (error) {
+            this.logger.error('Title Changer: 处理文件时发生错误', {
+                fileName: file.name,
+                error
+            });
             return null;
         }
-        
-        // 处理文件，获取显示标题
-        const displayTitle = TitleProcessor.processFile(file, this.settings);
-        
-        // 缓存结果
-        this.cache.set(fileId, displayTitle);
-        
-        return displayTitle;
     }
-    
+
     /**
      * 清除所有缓存
      */
     clearCache(): void {
-        this.cache.clear();
+        const cacheSize = this.titleCache.size;
+        this.titleCache.clear();
+        this.logger.debug(`Title Changer: 已清除 ${cacheSize} 条缓存记录`);
     }
-    
+
     /**
      * 使指定文件的缓存失效
-     * @param file 要移除缓存的文件
      */
     invalidateFile(file: TFile): void {
-        const fileId = file.path;
-        this.cache.delete(fileId);
+        try {
+            const fileId = file.path;
+            if (this.titleCache.has(fileId)) {
+                this.titleCache.delete(fileId);
+                this.logger.debug(`Title Changer: 已清除文件 ${file.name} 的缓存`);
+            }
+        } catch (error) {
+            this.logger.error('Title Changer: 清除文件缓存时发生错误', {
+                fileName: file.name,
+                error
+            });
+        }
+    }
+
+    /**
+     * 检查设置是否发生变化
+     */
+    private hasSettingsChanged(newSettings: TitleChangerSettings): boolean {
+        return this.settings.regexPattern !== newSettings.regexPattern ||
+               this.settings.folderRestrictionEnabled !== newSettings.folderRestrictionEnabled ||
+               JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders);
+    }
+
+    getDisplayTitle(fileName: string): string | null {
+        return this.titleCache.get(fileName) ?? null;
+    }
+
+    updateTitleCache(fileName: string, displayTitle: string): void {
+        this.titleCache.set(fileName, displayTitle);
     }
 } 

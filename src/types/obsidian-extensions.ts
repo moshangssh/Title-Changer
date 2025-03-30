@@ -52,6 +52,17 @@ export interface ICacheManager {
     processFile(file: TFile): string | null;
     invalidateFile(file: TFile): void;
     clearCache(): void;
+    /**
+     * 获取文件的显示标题
+     * @param fileName 文件名
+     */
+    getDisplayTitle(fileName: string): string | null;
+    /**
+     * 更新标题缓存
+     * @param fileName 文件名
+     * @param displayTitle 显示标题
+     */
+    updateTitleCache(fileName: string, displayTitle: string): void;
 }
 
 /**
