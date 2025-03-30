@@ -3,6 +3,7 @@ import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import type { ExplorerView } from './explorer-view';
 import type { EditorLinkView } from './editor-view';
+import type { ReadingView } from './reading-view';
 import type { IViewManager } from '../types/obsidian-extensions';
 
 /**
@@ -12,6 +13,7 @@ import type { IViewManager } from '../types/obsidian-extensions';
 export class ViewManager implements IViewManager {
     private explorerView: ExplorerView;
     private editorLinkView: EditorLinkView;
+    private readingView: ReadingView;
 
     /**
      * 构造函数
@@ -20,10 +22,12 @@ export class ViewManager implements IViewManager {
     constructor(
         @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
         @inject(TYPES.ExplorerView) explorerView: ExplorerView,
-        @inject(TYPES.EditorLinkView) editorLinkView: EditorLinkView
+        @inject(TYPES.EditorLinkView) editorLinkView: EditorLinkView,
+        @inject(TYPES.ReadingView) readingView: ReadingView
     ) {
         this.explorerView = explorerView;
         this.editorLinkView = editorLinkView;
+        this.readingView = readingView;
     }
 
     /**
@@ -32,6 +36,7 @@ export class ViewManager implements IViewManager {
     initialize(): void {
         this.explorerView.initialize();
         this.editorLinkView.initialize();
+        this.readingView.initialize();
     }
 
     /**
@@ -40,6 +45,7 @@ export class ViewManager implements IViewManager {
     unload(): void {
         this.explorerView.unload();
         this.editorLinkView.unload();
+        this.readingView.unload();
     }
 
     /**
@@ -48,6 +54,7 @@ export class ViewManager implements IViewManager {
     updateAllViews(): void {
         this.explorerView.updateView();
         this.editorLinkView.updateView();
+        this.readingView.updateView();
     }
 
     /**

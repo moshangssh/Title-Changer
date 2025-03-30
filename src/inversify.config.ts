@@ -8,6 +8,7 @@ import { CacheManager } from "./cache-manager";
 import { ViewManager } from "./views/view-manager";
 import { ExplorerView } from "./views/explorer-view";
 import { EditorLinkView } from "./views/editor-view";
+import { ReadingView } from "./views/reading-view";
 import { FileHandlerService } from "./services/file-handler.service";
 import { DOMSelectorService } from "./services/dom-selector.service";
 import { ExplorerStateService } from "./services/explorer-state.service";
@@ -38,6 +39,7 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     // 注册视图（单例）
     container.bind(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();
     container.bind(TYPES.EditorLinkView).to(EditorLinkView).inSingletonScope();
+    container.bind(TYPES.ReadingView).to(ReadingView).inSingletonScope();
     
     // 注册服务（单例）
     container.bind(TYPES.FileHandlerService).to(FileHandlerService).inSingletonScope();
