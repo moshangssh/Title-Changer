@@ -19,5 +19,6 @@ export const TYPES = {
   ExplorerStateService: Symbol.for("ExplorerStateService"),
   ExplorerEventsService: Symbol.for("ExplorerEventsService"),
   Logger: Symbol.for("Logger"),
-  EditorExtensionManager: Symbol.for("EditorExtensionManager")
+  EditorExtensionManager: Symbol.for("EditorExtensionManager"),
+  LinkTransformerService: Symbol.for('LinkTransformerService'),
 }; 

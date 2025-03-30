@@ -12,11 +12,13 @@ import { FileHandlerService } from './services/file-handler.service';
 import { DOMSelectorService } from './services/dom-selector.service';
 import { ExplorerStateService } from './services/explorer-state.service';
 import { ExplorerEventsService } from './services/explorer-events.service';
+import { LinkTransformerService } from './services/link-transformer.service';
 
 export class TitleChangerPlugin extends Plugin {
     settings: TitleChangerSettings;
     private container: Container;
     private viewManager: ViewManager;
+    private linkTransformer: LinkTransformerService;
 
     async onload() {
         console.log('加载 Title Changer 插件');
@@ -29,6 +31,8 @@ export class TitleChangerPlugin extends Plugin {
 
         // 获取服务实例
         this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
+        this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
+        this.linkTransformer.setSettings(this.settings);
 
         // 添加设置选项卡
         this.addSettingTab(new TitleChangerSettingTab(this.app, this));
@@ -43,6 +47,11 @@ export class TitleChangerPlugin extends Plugin {
             callback: () => {
                 this.viewManager.updateAllViews();
             }
+        });
+
+        // 注册后处理器
+        this.registerMarkdownPostProcessor((element, context) => {
+            this.linkTransformer.processInternalLinks(element);
         });
     }
 
@@ -61,6 +70,9 @@ export class TitleChangerPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
+        
+        // 更新链接转换器的设置
+        this.linkTransformer.setSettings(this.settings);
         
         // 设置变更时更新视图
         if (this.viewManager) {

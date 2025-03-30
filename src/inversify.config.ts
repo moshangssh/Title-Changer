@@ -15,6 +15,7 @@ import { ExplorerEventsService } from "./services/explorer-events.service";
 import { Logger } from "./utils/logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
 import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/obsidian-extensions";
+import { LinkTransformerService } from "./services/link-transformer.service";
 
 /**
  * 创建并配置 InversifyJS 容器
@@ -45,6 +46,7 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.ExplorerEventsService).to(ExplorerEventsService).inSingletonScope();
     container.bind(TYPES.Logger).to(Logger).inSingletonScope();
     container.bind<IEditorExtensionManager>(TYPES.EditorExtensionManager).to(EditorExtensionManager).inSingletonScope();
+    container.bind(TYPES.LinkTransformerService).to(LinkTransformerService).inSingletonScope();
     
     return container;
 } 
