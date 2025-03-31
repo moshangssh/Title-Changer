@@ -49,9 +49,15 @@ export class TitleChangerPlugin extends Plugin {
             }
         });
 
-        // 注册后处理器
+        // 注册后处理器，确保阅读视图中的链接得到处理
         this.registerMarkdownPostProcessor((element, context) => {
+            // 处理渲染后的Markdown内容中的内部链接
             this.linkTransformer.processInternalLinks(element);
+            
+            // 延迟处理以确保动态加载的内容也能正确显示
+            setTimeout(() => {
+                this.linkTransformer.processInternalLinks(element);
+            }, 200);
         });
     }
 

@@ -52,15 +52,36 @@ export class ViewManager implements IViewManager {
      * 更新所有视图
      */
     updateAllViews(): void {
-        this.explorerView.updateView();
-        this.editorLinkView.updateView();
-        this.readingView.updateView();
+        try {
+            // 首先更新文件浏览器视图
+            this.explorerView.updateView();
+            
+            // 更新编辑器视图
+            this.editorLinkView.updateView();
+            
+            // 最后更新阅读视图
+            this.readingView.updateView();
+            
+            // 对于可能尚未完全加载的阅读视图内容，延迟再次更新
+            setTimeout(() => {
+                this.readingView.updateView();
+            }, 300);
+            
+        } catch (error) {
+            console.error('Title Changer: 更新视图时发生错误', error);
+        }
     }
 
     /**
      * 更新设置后刷新所有视图
      */
     onSettingsChanged(): void {
-        this.updateAllViews();
+        // 优先更新阅读视图，因为它最可能受到设置变化的影响
+        try {
+            this.readingView.updateView();
+            setTimeout(() => this.updateAllViews(), 100);
+        } catch (error) {
+            console.error('Title Changer: 设置更新后刷新视图时发生错误', error);
+        }
     }
 } 

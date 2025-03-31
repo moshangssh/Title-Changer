@@ -76,3 +76,8 @@ Title Changer 使用依赖注入(IoC)设计模式和模块化架构，保持代�
 ## 许可证
 
 本项目基于 MIT 许可证开源 🔍
+
+
+编辑模式: source mode
+阅读视图: preview mode
+检测文件名: 监听
