@@ -1,9 +1,10 @@
-import { EditorView, Decoration, DecorationSet, ViewUpdate, ViewPlugin, WidgetType } from '@codemirror/view';
+import { EditorView, Decoration, DecorationSet, ViewUpdate, ViewPlugin } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
 import type { ICacheManager } from '../types/obsidian-extensions';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { ErrorManagerService, ErrorLevel } from './error-manager.service';
+import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 
 @injectable()
 export class DecorationManager {
@@ -111,27 +112,5 @@ export class DecorationManager {
      */
     clearCache(view: EditorView): void {
         this.decorationCache.delete(view);
-    }
-}
-
-/**
- * 链接标题小部件
- */
-class LinkTitleWidget extends WidgetType {
-    constructor(readonly displayTitle: string, readonly originalText: string) {
-        super();
-    }
-
-    toDOM(): HTMLElement {
-        const span = document.createElement('span');
-        span.textContent = `[[${this.displayTitle}]]`;
-        span.className = 'cm-link cm-internal-link';
-        span.setAttribute('data-original-text', this.originalText);
-        return span;
-    }
-
-    eq(other: LinkTitleWidget): boolean {
-        return other.displayTitle === this.displayTitle && 
-               other.originalText === this.originalText;
     }
 } 

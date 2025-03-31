@@ -10,6 +10,7 @@ import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
 import { ErrorCategory } from '../utils/errors';
 import { isError, convertToTitleChangerError } from '../utils/error-helpers';
+import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
@@ -220,34 +221,5 @@ export class EditorLinkView {
         // 注册扩展
         const symbol = this.extensionManager.registerExtension(linkTitlePlugin);
         this.registeredExtensions.push(symbol);
-    }
-}
-
-/**
- * 链接标题小部件
- */
-class LinkTitleWidget extends WidgetType {
-    constructor(
-        readonly title: string, 
-        readonly originalFileName: string,
-        readonly plugin: TitleChangerPlugin
-    ) {
-        super();
-    }
-
-    toDOM() {
-        const span = document.createElement('span');
-        span.textContent = this.title;
-        span.className = 'title-changer-link cm-hmd-internal-link';
-        
-        // 使用 data 属性存储链接信息
-        span.dataset.linktext = this.originalFileName;
-        
-        return span;
-    }
-
-    ignoreEvent() {
-        // 返回 false 表示我们需要处理事件
-        return false;
     }
 } 
