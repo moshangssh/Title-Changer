@@ -11,6 +11,7 @@ import { ErrorManagerService, ErrorLevel } from '../services/error-manager.servi
 import { ErrorCategory } from '../utils/errors';
 import { isError, convertToTitleChangerError } from '../utils/error-helpers';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
+import { extractWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
@@ -114,46 +115,10 @@ export class EditorLinkView {
                         const processFrom = Math.max(0, from - bufferSize);
                         const processTo = Math.min(doc.length, to + bufferSize);
                         
-                        // 定义双链正则表达式
-                        const wikiLinkRegex = /\[\[([^\]|#]+)(?:\|([^\]#]+))?(?:#([^\]|]+))?\]\]/g;
-                        
                         let pos = processFrom;
                         while (pos <= processTo) {
                             const line = doc.lineAt(pos);
-                            const lineText = line.text;
-                            
-                            let match;
-                            while ((match = wikiLinkRegex.exec(lineText)) !== null) {
-                                const originalFileName = match[1];
-                                // 如果已有显示文本则跳过
-                                if (match[2]) continue;
-                                
-                                try {
-                                    // 从缓存获取显示标题
-                                    const displayTitle = this.getDisplayTitle(originalFileName);
-                                    
-                                    if (displayTitle && displayTitle !== originalFileName) {
-                                        const matchStart = line.from + match.index;
-                                        const linkTextStart = matchStart + 2; // 跳过 [[ 
-                                        const linkTextEnd = linkTextStart + originalFileName.length;
-                                        
-                                        builder.add(
-                                            linkTextStart, 
-                                            linkTextEnd, 
-                                            Decoration.replace({
-                                                widget: new LinkTitleWidget(displayTitle, originalFileName, self.plugin)
-                                            })
-                                        );
-                                    }
-                                } catch (error) {
-                                    self.errorManager.handleError(
-                                        convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
-                                        ErrorLevel.WARNING,
-                                        { location: 'buildDecorations', details: { fileName: originalFileName } }
-                                    );
-                                    continue;
-                                }
-                            }
+                            this.processLine(line.text, line.from, builder);
                             pos = line.to + 1;
                         }
                         
@@ -165,6 +130,41 @@ export class EditorLinkView {
                             { location: 'buildDecorations' }
                         );
                         return Decoration.none;
+                    }
+                }
+                
+                /**
+                 * 处理单行内容中的Wiki链接
+                 */
+                processLine(text: string, lineStart: number, builder: RangeSetBuilder<Decoration>): void {
+                    // 使用新的工具函数提取Wiki链接
+                    const wikiLinks = extractWikiLinks(text, lineStart);
+                    
+                    for (const link of wikiLinks) {
+                        // 如果已有显示文本则跳过
+                        if (!shouldReplaceTitle(link)) continue;
+                        
+                        try {
+                            // 从缓存获取显示标题
+                            const displayTitle = this.getDisplayTitle(link.fileName);
+                            
+                            if (displayTitle && displayTitle !== link.fileName) {
+                                builder.add(
+                                    link.start + 2, // 跳过 [[ 
+                                    link.start + 2 + link.fileName.length,
+                                    Decoration.replace({
+                                        widget: new LinkTitleWidget(displayTitle, link.fileName, self.plugin)
+                                    })
+                                );
+                            }
+                        } catch (error) {
+                            self.errorManager.handleError(
+                                convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
+                                ErrorLevel.WARNING,
+                                { location: 'processLine', details: { fileName: link.fileName } }
+                            );
+                            continue;
+                        }
                     }
                 }
 

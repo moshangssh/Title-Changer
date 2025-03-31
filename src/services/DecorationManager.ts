@@ -5,6 +5,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { ErrorManagerService, ErrorLevel } from './error-manager.service';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
+import { extractSimpleWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
 
 @injectable()
 export class DecorationManager {
@@ -80,21 +81,17 @@ export class DecorationManager {
      * 处理单行内容
      */
     private processLine(text: string, lineStart: number, builder: RangeSetBuilder<Decoration>): void {
-        const linkRegex = /\[\[(.*?)\]\]/g;
-        let match;
-
-        while ((match = linkRegex.exec(text)) !== null) {
+        // 使用新的工具函数提取Wiki链接
+        const wikiLinks = extractSimpleWikiLinks(text, lineStart);
+        
+        for (const link of wikiLinks) {
             try {
-                const [fullMatch, linkText] = match;
-                const from = lineStart + match.index;
-                const to = from + fullMatch.length;
-
-                const displayTitle = this.cacheManager.getDisplayTitle(linkText);
-                if (displayTitle && displayTitle !== linkText) {
+                const displayTitle = this.cacheManager.getDisplayTitle(link.fileName);
+                if (displayTitle && displayTitle !== link.fileName && shouldReplaceTitle(link)) {
                     const decoration = Decoration.replace({
-                        widget: new LinkTitleWidget(displayTitle, linkText)
+                        widget: new LinkTitleWidget(displayTitle, link.fileName)
                     });
-                    builder.add(from, to, decoration);
+                    builder.add(link.start, link.end, decoration);
                 }
             } catch (error) {
                 this.errorManager.handleError(
