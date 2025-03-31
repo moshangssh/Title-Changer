@@ -4,8 +4,8 @@ import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import { TFile } from 'obsidian';
 import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory, RegexError } from '../utils/errors';
-import { convertToTitleChangerError, logErrorsWithoutThrowing, safeRegexCreation, safeRegexExecution } from '../utils/error-helpers';
+import { ErrorCategory, RegexError, ValidationError } from '../utils/errors';
+import { convertToTitleChangerError, logErrorsWithoutThrowing, safeRegexCreation, safeRegexExecution, validateData, tryCatchWithValidation } from '../utils/error-helpers';
 import { Logger } from '../utils/logger';
 
 @injectable()
@@ -18,8 +18,34 @@ export class LinkTransformerService {
         @inject(TYPES.Logger) private logger: Logger
     ) {}
 
-    setSettings(settings: TitleChangerSettings) {
-        this.settings = settings;
+    /**
+     * 设置插件配置
+     */
+    setSettings(settings: TitleChangerSettings): void {
+        tryCatchWithValidation(
+            () => {
+                validateData(
+                    settings,
+                    (s) => s !== null && s !== undefined && typeof s === 'object',
+                    '设置对象必须是有效的',
+                    this.constructor.name
+                );
+                this.settings = settings;
+                return true;
+            },
+            (result) => result === true,
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '应用设置时出错',
+                validationErrorMessage: '无效的设置对象',
+                category: ErrorCategory.CONFIG,
+                level: ErrorLevel.ERROR,
+                details: { settings },
+                userVisible: true
+            }
+        );
     }
 
     /**
@@ -28,12 +54,28 @@ export class LinkTransformerService {
      * @returns 转换后的文本
      */
     transformLinkText(text: string): string {
-        if (!text) return text;
+        // 验证输入参数
+        if (text === null || text === undefined) {
+            this.logger.warn('transformLinkText收到null或undefined参数', { text });
+            return '';
+        }
 
         return logErrorsWithoutThrowing(() => {
+            // 确保text是字符串类型
+            const safeText = String(text);
+            if (safeText.trim() === '') {
+                return safeText;
+            }
+
+            // 检查设置是否已初始化
+            if (!this.settings) {
+                this.logger.warn('设置尚未初始化', { text: safeText });
+                return safeText;
+            }
+
             // 检查是否有正则表达式模式
             if (!this.settings.regexPattern || this.settings.regexPattern.trim() === '') {
-                return text;
+                return safeText;
             }
 
             // 使用安全的正则表达式创建
@@ -49,14 +91,15 @@ export class LinkTransformerService {
                 // 使用安全的正则表达式执行
                 const match = safeRegexExecution(
                     regex,
-                    text,
+                    safeText,
                     this.constructor.name,
                     this.errorManager,
                     this.logger
                 );
                 
                 if (match && match.length > 1) {
-                    return match[1]; // 返回第一个捕获组
+                    const result = match[1].trim(); // 返回第一个捕获组并清理空白
+                    return result || safeText; // 确保不返回空字符串
                 }
             }
 
@@ -72,23 +115,25 @@ export class LinkTransformerService {
             if (fallbackRegex) {
                 const fallbackMatch = safeRegexExecution(
                     fallbackRegex,
-                    text,
+                    safeText,
                     this.constructor.name,
                     this.errorManager,
                     this.logger
                 );
                 
                 if (fallbackMatch && fallbackMatch.length > 1) {
-                    return fallbackMatch[1];
+                    const result = fallbackMatch[1].trim();
+                    return result || safeText;
                 }
             }
 
-            return text;
+            return safeText;
         }, this.constructor.name, this.errorManager, this.logger, {
             errorMessage: '链接文本转换失败',
             category: ErrorCategory.REGEX,
             level: ErrorLevel.WARNING,
-            defaultValue: text
+            defaultValue: text,
+            details: { textLength: text.length, textPreview: text.substring(0, 20) }
         });
     }
 
@@ -97,52 +142,98 @@ export class LinkTransformerService {
      * @param element 要处理的 DOM 元素
      */
     processInternalLinks(element: HTMLElement): void {
+        // 验证输入参数
+        try {
+            validateData(
+                element,
+                (el) => el instanceof HTMLElement,
+                'element必须是HTMLElement类型',
+                this.constructor.name
+            );
+        } catch (error) {
+            this.errorManager.handleError(
+                error instanceof Error ? error : new ValidationError('无效的DOM元素参数', {
+                    sourceComponent: this.constructor.name,
+                    details: { element },
+                    userVisible: false
+                }),
+                ErrorLevel.ERROR
+            );
+            return;
+        }
+
         logErrorsWithoutThrowing(() => {
+            if (!element || !element.querySelectorAll) {
+                return false;
+            }
+            
             const internalLinks = element.querySelectorAll('a.internal-link');
+            if (!internalLinks || internalLinks.length === 0) {
+                return true; // 没有链接也算成功
+            }
             
             internalLinks.forEach((link: Element) => {
-                // 跳过已处理的链接
-                if (link.hasAttribute('data-title-processed')) return;
-                
-                const linkElement = link as HTMLElement;
-                // 获取原始文件名
-                const href = linkElement.getAttribute('href');
-                const originalFileName = href?.replace(/^#/, '') || linkElement.getAttribute('data-href');
-                if (!originalFileName) return;
-                
-                // 获取显示标题
-                let displayTitle = null;
-                
-                // 首先尝试从缓存获取
-                const baseName = originalFileName.replace(/\.[^.]+$/, '');
-                displayTitle = this.cacheManager.getDisplayTitle(baseName);
-                
-                // 如果缓存中没有，尝试处理链接文本
-                if (!displayTitle) {
-                    const linkText = linkElement.innerText;
-                    const transformedText = this.transformLinkText(linkText);
+                logErrorsWithoutThrowing(() => {
+                    // 跳过已处理的链接
+                    if (link.hasAttribute('data-title-processed')) return true;
                     
-                    if (transformedText !== linkText) {
-                        displayTitle = transformedText;
+                    const linkElement = link as HTMLElement;
+                    // 获取原始文件名
+                    const href = linkElement.getAttribute('href');
+                    const originalFileName = href?.replace(/^#/, '') || linkElement.getAttribute('data-href');
+                    if (!originalFileName) return true;
+                    
+                    // 获取显示标题
+                    let displayTitle = null;
+                    
+                    // 首先尝试从缓存获取
+                    const baseName = originalFileName.replace(/\.[^.]+$/, '');
+                    displayTitle = this.cacheManager.getDisplayTitle(baseName);
+                    
+                    // 如果缓存中没有，尝试处理链接文本
+                    if (!displayTitle) {
+                        const linkText = linkElement.innerText;
+                        const transformedText = this.transformLinkText(linkText);
+                        
+                        if (transformedText !== linkText) {
+                            displayTitle = transformedText;
+                        }
                     }
-                }
-                
-                // 更新链接显示
-                if (displayTitle && displayTitle !== linkElement.innerText) {
-                    linkElement.innerText = displayTitle;
                     
-                    // 保留原始文本作为 title 属性以便悬停查看
-                    linkElement.title = originalFileName;
+                    // 更新链接显示
+                    if (displayTitle && displayTitle !== linkElement.innerText) {
+                        linkElement.innerText = displayTitle;
+                        
+                        // 保留原始文本作为 title 属性以便悬停查看
+                        linkElement.title = originalFileName;
+                        
+                        // 标记为已处理
+                        linkElement.setAttribute('data-title-processed', 'true');
+                    }
                     
-                    // 标记为已处理
-                    linkElement.setAttribute('data-title-processed', 'true');
-                }
+                    return true;
+                }, this.constructor.name, this.errorManager, this.logger, {
+                    errorMessage: '处理单个内部链接失败',
+                    category: ErrorCategory.UI,
+                    level: ErrorLevel.DEBUG,
+                    defaultValue: false,
+                    details: { 
+                        linkHref: link.getAttribute('href'),
+                        linkText: link.textContent
+                    }
+                });
             });
+            
+            return true;
         }, this.constructor.name, this.errorManager, this.logger, {
             errorMessage: '处理内部链接失败',
             category: ErrorCategory.UI,
             level: ErrorLevel.ERROR,
-            details: { element: element.tagName }
+            defaultValue: false,
+            details: { 
+                element: element.tagName,
+                linkCount: element.querySelectorAll?.('a.internal-link')?.length || 0
+            }
         });
     }
 } 

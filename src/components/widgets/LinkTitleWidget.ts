@@ -1,11 +1,15 @@
 import { WidgetType } from '@codemirror/view';
 import { Plugin } from 'obsidian';
+import { createSpan } from '../../utils/dom-helpers';
+import { ErrorManagerService } from '../../services/error-manager.service';
+import { Logger } from '../../utils/logger';
 
 /**
  * 插件类型声明
  */
 export interface TitleChangerPlugin extends Plugin {
-    // 插件特有的属性和方法
+    errorManager?: ErrorManagerService;
+    logger?: Logger;
 }
 
 /**
@@ -32,6 +36,48 @@ export class LinkTitleWidget extends WidgetType {
      * @returns 创建的HTML元素
      */
     toDOM(): HTMLElement {
+        // 检查是否有错误管理器和日志记录器
+        const errorManager = this.plugin?.errorManager;
+        const logger = this.plugin?.logger;
+        
+        // 如果有错误管理器和日志记录器，使用DOM助手函数
+        if (errorManager && logger) {
+            if (this.plugin) {
+                // 编辑器视图样式
+                return createSpan(
+                    {
+                        textContent: this.displayTitle,
+                        className: 'title-changer-link cm-hmd-internal-link',
+                        dataset: { linktext: this.originalText }
+                    },
+                    'LinkTitleWidget',
+                    errorManager,
+                    logger
+                ) || this.createSpanManually();
+            } else {
+                // 装饰管理器样式
+                return createSpan(
+                    {
+                        textContent: `[[${this.displayTitle}]]`,
+                        className: 'cm-link cm-internal-link',
+                        attributes: { 'data-original-text': this.originalText }
+                    },
+                    'LinkTitleWidget',
+                    errorManager,
+                    logger
+                ) || this.createSpanManually();
+            }
+        }
+        
+        // 如果没有错误管理器或日志记录器，回退到手动创建
+        return this.createSpanManually();
+    }
+    
+    /**
+     * 手动创建span元素（作为备选方法）
+     * @returns 创建的HTML元素
+     */
+    private createSpanManually(): HTMLElement {
         const span = document.createElement('span');
         
         // 根据是否提供插件实例决定显示格式

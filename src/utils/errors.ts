@@ -17,6 +17,7 @@ export enum ErrorCategory {
   DECORATION = 'DECORATION', // 装饰/渲染相关错误
   API = 'API',       // API调用错误
   VALIDATION = 'VALIDATION', // 数据验证错误
+  CACHE = 'CACHE',     // 缓存相关错误
   UNKNOWN = 'UNKNOWN'     // 未知错误
 }
 
@@ -210,5 +211,18 @@ export class ValidationError extends TitleChangerError {
       category: ErrorCategory.VALIDATION
     });
     this.name = 'ValidationError';
+  }
+}
+
+/**
+ * 缓存相关错误
+ */
+export class CacheError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.CACHE
+    });
+    this.name = 'CacheError';
   }
 } 

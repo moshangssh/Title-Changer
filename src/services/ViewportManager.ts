@@ -6,7 +6,12 @@ import { TYPES } from '../types/symbols';
 import type { ErrorManagerService } from './error-manager.service';
 import { ErrorLevel } from './error-manager.service';
 import { ErrorCategory } from '../utils/errors';
-import { convertToTitleChangerError } from '../utils/error-helpers';
+import { 
+  convertToTitleChangerError, 
+  tryCatchWrapper, 
+  handleEditorOperation, 
+  tryCatchWithValidation 
+} from '../utils/error-helpers';
 import { Logger } from '../utils/logger';
 
 @injectable()
@@ -36,40 +41,37 @@ export class ViewportManager {
    * @param update 编辑器视图更新事件
    */
   handleViewportUpdate(update: ViewUpdate): void {
-    try {
-      const { view, docChanged, viewportChanged } = update;
-      
-      // 仅在文档变更或视口变更时处理
-      if (!docChanged && !viewportChanged) {
-        return;
-      }
-
-      // 检查是否需要处理当前范围
-      const currentRange = this.processedRanges.get(view);
-      const { from, to } = view.viewport;
-      
-      if (currentRange && !docChanged) {
-        // 如果当前范围完全包含视口，且文档未变更，则跳过处理
-        if (currentRange.from <= from && currentRange.to >= to) {
+    handleEditorOperation(
+      () => {
+        const { view, docChanged, viewportChanged } = update;
+        
+        // 仅在文档变更或视口变更时处理
+        if (!docChanged && !viewportChanged) {
           return;
         }
-      }
 
-      this.processVisibleContent(view);
-    } catch (error) {
-      const titleChangerError = convertToTitleChangerError(
-        error,
-        this.constructor.name,
-        ErrorCategory.UI,
-        true
-      );
-      
-      this.errorManager.handleError(
-        titleChangerError,
-        ErrorLevel.ERROR,
-        { location: 'handleViewportUpdate' }
-      );
-    }
+        // 检查是否需要处理当前范围
+        const currentRange = this.processedRanges.get(view);
+        const { from, to } = view.viewport;
+        
+        if (currentRange && !docChanged) {
+          // 如果当前范围完全包含视口，且文档未变更，则跳过处理
+          if (currentRange.from <= from && currentRange.to >= to) {
+            return;
+          }
+        }
+
+        this.processVisibleContent(view);
+      },
+      this.constructor.name,
+      this.errorManager,
+      this.logger,
+      {
+        errorMessage: '处理视口更新失败',
+        userVisible: true,
+        details: { location: 'handleViewportUpdate' }
+      }
+    );
   }
 
   /**
@@ -90,30 +92,27 @@ export class ViewportManager {
     const processFrom = Math.max(0, from - dynamicBufferSize);
     const processTo = Math.min(doc.length, to + dynamicBufferSize);
 
-    try {
-      let pos = processFrom;
-      while (pos <= processTo) {
-        const line = doc.lineAt(pos);
-        this.processLine(line.text, line.from);
-        pos = line.to + 1;
-      }
+    handleEditorOperation(
+      () => {
+        let pos = processFrom;
+        while (pos <= processTo) {
+          const line = doc.lineAt(pos);
+          this.processLine(line.text, line.from);
+          pos = line.to + 1;
+        }
 
-      // 更新已处理范围
-      this.processedRanges.set(view, { from: processFrom, to: processTo });
-    } catch (error) {
-      const titleChangerError = convertToTitleChangerError(
-        error,
-        this.constructor.name,
-        ErrorCategory.UI,
-        false
-      );
-      
-      this.errorManager.handleError(
-        titleChangerError,
-        ErrorLevel.WARNING,
-        { location: 'processVisibleContent' }
-      );
-    }
+        // 更新已处理范围
+        this.processedRanges.set(view, { from: processFrom, to: processTo });
+      },
+      this.constructor.name,
+      this.errorManager,
+      this.logger,
+      {
+        errorMessage: '处理可见内容失败',
+        userVisible: false,
+        details: { location: 'processVisibleContent', range: { from: processFrom, to: processTo } }
+      }
+    );
   }
 
   /**
@@ -122,33 +121,32 @@ export class ViewportManager {
    * @param lineStart 行起始位置
    */
   private processLine(lineText: string, lineStart: number): void {
-    try {
-      // 使用正则表达式匹配内部链接
-      const linkRegex = /\[\[(.*?)\]\]/g;
-      let match;
+    tryCatchWrapper(
+      () => {
+        // 使用正则表达式匹配内部链接
+        const linkRegex = /\[\[(.*?)\]\]/g;
+        let match;
 
-      while ((match = linkRegex.exec(lineText)) !== null) {
-        const linkText = match[1];
-        const displayTitle = this.cacheManager.getDisplayTitle(linkText);
-        
-        if (displayTitle && displayTitle !== linkText) {
-          // 更新缓存
-          this.cacheManager.updateTitleCache(linkText, displayTitle);
+        while ((match = linkRegex.exec(lineText)) !== null) {
+          const linkText = match[1];
+          const displayTitle = this.cacheManager.getDisplayTitle(linkText);
+          
+          if (displayTitle && displayTitle !== linkText) {
+            // 更新缓存
+            this.cacheManager.updateTitleCache(linkText, displayTitle);
+          }
         }
+      },
+      this.constructor.name,
+      this.errorManager,
+      this.logger,
+      {
+        errorMessage: '处理行内容失败',
+        category: ErrorCategory.REGEX,
+        level: ErrorLevel.WARNING,
+        userVisible: false,
+        details: { location: 'processLine', lineText, lineStart }
       }
-    } catch (error) {
-      const titleChangerError = convertToTitleChangerError(
-        error,
-        this.constructor.name,
-        ErrorCategory.REGEX,
-        false
-      );
-      
-      this.errorManager.handleError(
-        titleChangerError,
-        ErrorLevel.WARNING,
-        { location: 'processLine', lineText }
-      );
-    }
+    );
   }
 } 

@@ -7,7 +7,7 @@ import { DOMSelectorService } from './dom-selector.service';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './error-manager.service';
 import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper } from '../utils/error-helpers';
+import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/error-helpers';
 
 /**
  * 文件处理服务，负责处理文件相关操作
@@ -25,7 +25,7 @@ export class FileHandlerService {
      * 通过基本名称查找文件
      */
     findFileByBasename(basename: string): TFile | null {
-        return tryCatchWrapper(
+        return handleDataOperation(
             () => {
                 const files = this.vault.getMarkdownFiles();
                 return files.find(file => file.basename === basename) || null;
@@ -35,8 +35,6 @@ export class FileHandlerService {
             this.logger,
             {
                 errorMessage: '查找文件时出错',
-                category: ErrorCategory.FILE,
-                level: ErrorLevel.WARNING,
                 details: { basename },
                 userVisible: false
             }
@@ -47,7 +45,7 @@ export class FileHandlerService {
      * 安全地设置文本内容
      */
     private safeSetTextContent(element: Element | null, text: string | null): void {
-        tryCatchWrapper(
+        tryCatchWithValidation(
             () => {
                 if (!element || !text) return null;
                 // 对文本内容进行 HTML 转义
@@ -60,11 +58,13 @@ export class FileHandlerService {
                 element.textContent = safeText;
                 return true;
             },
+            (result) => result === true || result === null, // 验证函数
             this.constructor.name,
             this.errorManager,
             this.logger,
             {
                 errorMessage: '设置文本内容时出错',
+                validationErrorMessage: '文本内容设置验证失败',
                 category: ErrorCategory.UI,
                 level: ErrorLevel.WARNING,
                 details: { elementTag: element?.tagName, textLength: text?.length },
@@ -103,8 +103,14 @@ export class FileHandlerService {
         cacheManager: CacheManager,
         stateService: ExplorerStateService
     ): void {
-        tryCatchWrapper(
+        handleDataOperation(
             () => {
+                // 验证输入参数
+                validateData(fileItem, 
+                    (item) => item instanceof HTMLElement, 
+                    '文件项必须是HTMLElement类型', 
+                    this.constructor.name);
+                
                 // 获取标题元素
                 const titleEl = this.domSelector.getTitleElement(fileItem);
                 if (!titleEl) return null;
@@ -142,8 +148,6 @@ export class FileHandlerService {
             this.logger,
             {
                 errorMessage: '处理文件项时出错',
-                category: ErrorCategory.FILE,
-                level: ErrorLevel.ERROR,
                 details: { fileItemClass: fileItem.className },
                 userVisible: false
             }
@@ -158,8 +162,14 @@ export class FileHandlerService {
         cacheManager: CacheManager,
         stateService: ExplorerStateService
     ): void {
+        // 验证输入参数
+        validateData(elements, 
+            (items) => Array.isArray(items) && items.every(item => item instanceof Element), 
+            '元素必须是Element类型数组', 
+            this.constructor.name);
+            
         elements.forEach(element => {
-            tryCatchWrapper(
+            handleDataOperation(
                 () => {
                     const text = this.safeGetTextContent(element);
                     if (!text) return null;
@@ -186,8 +196,6 @@ export class FileHandlerService {
                 this.logger,
                 {
                     errorMessage: '处理文本元素时出错',
-                    category: ErrorCategory.UI,
-                    level: ErrorLevel.WARNING,
                     details: { elementTag: element.tagName },
                     userVisible: false
                 }

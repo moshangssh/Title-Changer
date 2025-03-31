@@ -9,9 +9,25 @@ import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager 
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
 import { ErrorCategory } from '../utils/errors';
-import { isError, convertToTitleChangerError } from '../utils/error-helpers';
+import { 
+    isError, 
+    convertToTitleChangerError, 
+    handleEditorOperation, 
+    tryCatchWithValidation,
+    tryCatchWrapper,
+    logErrorsWithoutThrowing
+} from '../utils/error-helpers';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 import { extractWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
+import { 
+    getAttribute, 
+    createLink, 
+    createSpan, 
+    createDiv, 
+    toggleClass, 
+    querySelector, 
+    querySelectorAll 
+} from '../utils/dom-helpers';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
@@ -37,16 +53,36 @@ export class EditorLinkView {
         
         // 注册全局事件委托
         this.plugin.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-            const target = evt.target as HTMLElement;
-            if (target.classList.contains('title-changer-link')) {
-                evt.preventDefault();
-                evt.stopPropagation();
-                
-                const linkText = target.dataset.linktext;
-                if (linkText) {
-                    this.plugin.app.workspace.openLinkText(linkText, '', false);
+            handleEditorOperation(
+                () => {
+                    const target = evt.target as HTMLElement;
+                    if (target.classList.contains('title-changer-link')) {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        
+                        // 使用DOM助手函数安全地获取属性
+                        const linkText = getAttribute(
+                            target, 
+                            'data-linktext', 
+                            'EditorLinkView', 
+                            this.errorManager, 
+                            this.logger
+                        );
+                        
+                        if (linkText) {
+                            this.plugin.app.workspace.openLinkText(linkText, '', false);
+                        }
+                    }
+                },
+                'EditorLinkView',
+                this.errorManager,
+                this.logger,
+                {
+                    errorMessage: '处理链接点击事件失败',
+                    userVisible: false,
+                    details: { action: 'handleLinkClick' }
                 }
-            }
+            );
         });
     }
 
@@ -87,50 +123,58 @@ export class EditorLinkView {
                 }
 
                 update(update: ViewUpdate) {
-                    try {
-                        if (update.docChanged || 
-                            update.viewportChanged || 
-                            update.transactions.some(tr => tr.annotation(settingsChangedAnnotation))) {
-                            this.decorations = this.buildDecorations(update.view);
+                    handleEditorOperation(
+                        () => {
+                            if (update.docChanged || 
+                                update.viewportChanged || 
+                                update.transactions.some(tr => tr.annotation(settingsChangedAnnotation))) {
+                                this.decorations = this.buildDecorations(update.view);
+                            }
+                        },
+                        'EditorLinkView',
+                        self.errorManager,
+                        self.logger,
+                        {
+                            errorMessage: '更新编辑器装饰失败',
+                            userVisible: false,
+                            details: { location: 'update' }
                         }
-                    } catch (error) {
-                        self.errorManager.handleError(
-                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
-                            ErrorLevel.ERROR,
-                            { location: 'update' }
-                        );
-                        // 保持现有装饰，避免视图崩溃
-                        return;
-                    }
+                    );
                 }
 
                 buildDecorations(view: EditorView): DecorationSet {
-                    try {
-                        const builder = new RangeSetBuilder<Decoration>();
-                        const { doc } = view.state;
-                        const { from, to } = view.viewport;
-                        
-                        // 添加缓冲区以提高滚动性能
-                        const bufferSize = 1000;
-                        const processFrom = Math.max(0, from - bufferSize);
-                        const processTo = Math.min(doc.length, to + bufferSize);
-                        
-                        let pos = processFrom;
-                        while (pos <= processTo) {
-                            const line = doc.lineAt(pos);
-                            this.processLine(line.text, line.from, builder);
-                            pos = line.to + 1;
+                    return tryCatchWithValidation(
+                        () => {
+                            const builder = new RangeSetBuilder<Decoration>();
+                            const { doc } = view.state;
+                            const { from, to } = view.viewport;
+                            
+                            // 添加缓冲区以提高滚动性能
+                            const bufferSize = 1000;
+                            const processFrom = Math.max(0, from - bufferSize);
+                            const processTo = Math.min(doc.length, to + bufferSize);
+                            
+                            let pos = processFrom;
+                            while (pos <= processTo) {
+                                const line = doc.lineAt(pos);
+                                this.processLine(line.text, line.from, builder);
+                                pos = line.to + 1;
+                            }
+                            
+                            return builder.finish();
+                        },
+                        (result) => result !== null && result !== undefined,
+                        'EditorLinkView',
+                        self.errorManager,
+                        self.logger,
+                        {
+                            errorMessage: '构建装饰失败',
+                            validationErrorMessage: '装饰构建结果无效',
+                            category: ErrorCategory.DECORATION,
+                            level: ErrorLevel.ERROR,
+                            details: { location: 'buildDecorations' }
                         }
-                        
-                        return builder.finish();
-                    } catch (error) {
-                        self.errorManager.handleError(
-                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
-                            ErrorLevel.ERROR,
-                            { location: 'buildDecorations' }
-                        );
-                        return Decoration.none;
-                    }
+                    ) || Decoration.none;
                 }
                 
                 /**
@@ -144,73 +188,90 @@ export class EditorLinkView {
                         // 如果已有显示文本则跳过
                         if (!shouldReplaceTitle(link)) continue;
                         
-                        try {
-                            // 从缓存获取显示标题
-                            const displayTitle = this.getDisplayTitle(link.fileName);
-                            
-                            if (displayTitle && displayTitle !== link.fileName) {
-                                builder.add(
-                                    link.start + 2, // 跳过 [[ 
-                                    link.start + 2 + link.fileName.length,
-                                    Decoration.replace({
-                                        widget: new LinkTitleWidget(displayTitle, link.fileName, self.plugin)
-                                    })
-                                );
+                        tryCatchWrapper(
+                            () => {
+                                // 从缓存获取显示标题
+                                const displayTitle = this.getDisplayTitle(link.fileName);
+                                
+                                if (displayTitle && displayTitle !== link.fileName) {
+                                    builder.add(
+                                        link.start + 2, // 跳过 [[ 
+                                        link.start + 2 + link.fileName.length,
+                                        Decoration.replace({
+                                            widget: new LinkTitleWidget(displayTitle, link.fileName, self.plugin)
+                                        })
+                                    );
+                                }
+                            },
+                            'EditorLinkView',
+                            self.errorManager,
+                            self.logger,
+                            {
+                                errorMessage: '处理链接失败',
+                                category: ErrorCategory.DECORATION,
+                                level: ErrorLevel.WARNING,
+                                userVisible: false,
+                                details: { location: 'processLine', fileName: link.fileName }
                             }
-                        } catch (error) {
-                            self.errorManager.handleError(
-                                convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
-                                ErrorLevel.WARNING,
-                                { location: 'processLine', details: { fileName: link.fileName } }
-                            );
-                            continue;
-                        }
+                        );
                     }
                 }
 
                 getDisplayTitle(fileName: string): string {
-                    try {
-                        // 尝试查找对应的文件
-                        const file = this.findFile(fileName);
-                        if (!file) return fileName;
-                        
-                        // 使用缓存管理器获取显示标题
-                        return this.getCachedDisplayTitle(file) || fileName;
-                    } catch (error) {
-                        self.errorManager.handleError(
-                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
-                            ErrorLevel.WARNING,
-                            { location: 'getDisplayTitle', details: { fileName } }
-                        );
-                        return fileName;
-                    }
+                    return tryCatchWrapper(
+                        () => {
+                            // 尝试查找对应的文件
+                            const file = this.findFile(fileName);
+                            if (!file) return fileName;
+                            
+                            // 使用缓存管理器获取显示标题
+                            return this.getCachedDisplayTitle(file) || fileName;
+                        },
+                        'EditorLinkView',
+                        self.errorManager,
+                        self.logger,
+                        {
+                            errorMessage: '获取显示标题失败',
+                            category: ErrorCategory.DATA,
+                            level: ErrorLevel.WARNING,
+                            details: { location: 'getDisplayTitle', fileName }
+                        }
+                    ) || fileName;
                 }
 
                 findFile(fileName: string): TFile | null {
-                    try {
-                        const files = self.plugin.app.vault.getMarkdownFiles();
-                        return files.find(file => file.basename === fileName || file.path === fileName) || null;
-                    } catch (error) {
-                        self.errorManager.handleError(
-                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.FILE),
-                            ErrorLevel.WARNING,
-                            { location: 'findFile', details: { fileName } }
-                        );
-                        return null;
-                    }
+                    return tryCatchWrapper(
+                        () => {
+                            const files = self.plugin.app.vault.getMarkdownFiles();
+                            return files.find(file => file.basename === fileName || file.path === fileName) || null;
+                        },
+                        'EditorLinkView',
+                        self.errorManager,
+                        self.logger,
+                        {
+                            errorMessage: '查找文件失败',
+                            category: ErrorCategory.FILE,
+                            level: ErrorLevel.WARNING,
+                            details: { location: 'findFile', fileName }
+                        }
+                    );
                 }
 
                 getCachedDisplayTitle(file: TFile): string | null {
-                    try {
-                        return self.cacheManager.processFile(file);
-                    } catch (error) {
-                        self.errorManager.handleError(
-                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.FILE),
-                            ErrorLevel.WARNING,
-                            { location: 'getCachedDisplayTitle', details: { filePath: file.path } }
-                        );
-                        return null;
-                    }
+                    return tryCatchWrapper(
+                        () => {
+                            return self.cacheManager.processFile(file);
+                        },
+                        'EditorLinkView',
+                        self.errorManager,
+                        self.logger,
+                        {
+                            errorMessage: '获取缓存标题失败',
+                            category: ErrorCategory.CACHE,
+                            level: ErrorLevel.WARNING,
+                            details: { location: 'getCachedDisplayTitle', filePath: file.path }
+                        }
+                    );
                 }
             },
             {

@@ -6,7 +6,18 @@ import { CacheManager } from '../cache-manager';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
 import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper } from '../utils/error-helpers';
+import { 
+    tryCatchWrapper, 
+    logErrorsWithoutThrowing, 
+    measurePerformance,
+    handleEditorOperation 
+} from '../utils/error-helpers';
+import { 
+    querySelector, 
+    querySelectorAll, 
+    getAttribute, 
+    setAttribute 
+} from '../utils/dom-helpers';
 
 /**
  * 阅读视图组件，负责处理预览模式中的标题显示
@@ -24,70 +35,120 @@ export class ReadingView {
      * 初始化阅读视图
      */
     initialize(): void {
-        // 注册文件打开事件监听器
-        this.plugin.registerEvent(
-            this.plugin.app.workspace.on('file-open', () => {
-                this.updateView();
-            })
-        );
-        
-        // 注册活动叶子变更事件
-        this.plugin.registerEvent(
-            this.plugin.app.workspace.on('active-leaf-change', () => {
-                this.updateView();
-            })
-        );
-        
-        // 注册预览模式渲染完成事件
-        this.plugin.registerEvent(
-            this.plugin.app.workspace.on('layout-change', () => {
-                setTimeout(() => this.updateView(), 100);
-            })
-        );
-        
-        // 注册文件修改事件
-        this.plugin.registerEvent(
-            this.plugin.app.vault.on('modify', (file) => {
-                if (file instanceof TFile && file.extension === 'md') {
-                    // 更新缓存
-                    this.cacheManager.invalidateFile(file);
-                    // 更新当前打开的文件的视图
-                    const activeFile = this.plugin.app.workspace.getActiveFile();
-                    if (activeFile && activeFile.path === file.path) {
+        tryCatchWrapper(
+            () => {
+                // 注册文件打开事件监听器
+                this.plugin.registerEvent(
+                    this.plugin.app.workspace.on('file-open', () => {
                         this.updateView();
-                    }
-                }
-            })
-        );
+                    })
+                );
+                
+                // 注册活动叶子变更事件
+                this.plugin.registerEvent(
+                    this.plugin.app.workspace.on('active-leaf-change', () => {
+                        this.updateView();
+                    })
+                );
+                
+                // 注册预览模式渲染完成事件
+                this.plugin.registerEvent(
+                    this.plugin.app.workspace.on('layout-change', () => {
+                        setTimeout(() => this.updateView(), 100);
+                    })
+                );
+                
+                // 注册文件修改事件
+                this.plugin.registerEvent(
+                    this.plugin.app.vault.on('modify', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file instanceof TFile && file.extension === 'md') {
+                                    // 更新缓存
+                                    this.cacheManager.invalidateFile(file);
+                                    // 更新当前打开的文件的视图
+                                    const activeFile = this.plugin.app.workspace.getActiveFile();
+                                    if (activeFile && activeFile.path === file.path) {
+                                        this.updateView();
+                                    }
+                                }
+                            },
+                            'ReadingView',
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件修改事件失败',
+                                category: ErrorCategory.FILE,
+                                level: ErrorLevel.WARNING,
+                                details: { filePath: file instanceof TFile ? file.path : 'unknown' }
+                            }
+                        );
+                    })
+                );
 
-        // 初始化时更新一次
-        this.updateView();
+                // 初始化时更新一次
+                this.updateView();
+            },
+            'ReadingView',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '初始化阅读视图失败',
+                category: ErrorCategory.LIFECYCLE,
+                level: ErrorLevel.ERROR,
+                userVisible: true,
+                details: { action: 'initialize' }
+            }
+        );
     }
 
     /**
      * 卸载阅读视图
      */
     unload(): void {
-        // 可以在这里进行清理工作
+        tryCatchWrapper(
+            () => {
+                // 可以在这里进行清理工作
+                this.logger.debug('阅读视图已卸载');
+            },
+            'ReadingView',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '卸载阅读视图失败',
+                category: ErrorCategory.LIFECYCLE,
+                level: ErrorLevel.WARNING,
+                userVisible: false,
+                details: { action: 'unload' }
+            }
+        );
     }
 
     /**
      * 更新阅读视图中的链接标题
      */
     updateView(): void {
-        // 获取当前活动叶子
-        const activeLeaf = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeLeaf) return;
-        
-        // 检查是否处于阅读模式
-        if (activeLeaf.getMode() !== 'preview') return;
+        measurePerformance(
+            () => {
+                // 获取当前活动叶子
+                const activeLeaf = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                if (!activeLeaf) return;
+                
+                // 检查是否处于阅读模式
+                if (activeLeaf.getMode() !== 'preview') return;
 
-        // 获取预览模式下的DOM元素
-        const previewEl = activeLeaf.previewMode.containerEl;
-        if (!previewEl) return;
+                // 获取预览模式下的DOM元素
+                const previewEl = activeLeaf.previewMode.containerEl;
+                if (!previewEl) return;
 
-        // 处理预览模式中的所有链接
-        this.processPreviewLinks(previewEl);
+                // 处理预览模式中的所有链接
+                this.processPreviewLinks(previewEl);
+            },
+            'ReadingView',
+            100, // 性能阈值(ms)
+            this.errorManager,
+            this.logger
+        );
     }
 
     /**
@@ -96,38 +157,95 @@ export class ReadingView {
     private processPreviewLinks(containerEl: HTMLElement): void {
         tryCatchWrapper(
             () => {
-                // 查找预览模式中的所有内部链接
-                const internalLinks = containerEl.querySelectorAll('.internal-link');
+                // 使用DOM助手函数查找所有内部链接
+                const internalLinks = querySelectorAll(
+                    containerEl,
+                    '.internal-link',
+                    'ReadingView',
+                    this.errorManager,
+                    this.logger
+                );
                 
                 internalLinks.forEach(linkEl => {
-                    // 获取链接的原始文件名
-                    const originalFileName = linkEl.getAttribute('data-href');
-                    if (!originalFileName) return;
-                    
-                    // 跳过已有自定义显示文本的链接
-                    if (linkEl.hasAttribute('data-link-text')) return;
-                    
-                    // 跳过已处理过的链接
-                    if (linkEl.hasAttribute('data-title-processed')) return;
-                    
-                    // 从缓存获取显示标题
-                    const displayTitle = this.getDisplayTitle(originalFileName);
-                    
-                    if (displayTitle && displayTitle !== originalFileName) {
-                        // 更新链接显示文本
-                        linkEl.textContent = displayTitle;
-                        
-                        // 保留原始文本作为提示
-                        (linkEl as HTMLElement).title = originalFileName;
-                        
-                        // 标记为已处理
-                        linkEl.setAttribute('data-title-processed', 'true');
-                    }
+                    logErrorsWithoutThrowing(
+                        () => {
+                            // 使用DOM助手函数获取链接属性
+                            const originalFileName = getAttribute(
+                                linkEl as HTMLElement,
+                                'data-href',
+                                'ReadingView',
+                                this.errorManager,
+                                this.logger
+                            );
+                            
+                            if (!originalFileName) return;
+                            
+                            // 检查是否已有自定义显示文本
+                            const hasLinkText = getAttribute(
+                                linkEl as HTMLElement,
+                                'data-link-text',
+                                'ReadingView',
+                                this.errorManager,
+                                this.logger
+                            ) !== null;
+                            
+                            if (hasLinkText) return;
+                            
+                            // 检查是否已处理过
+                            const isProcessed = getAttribute(
+                                linkEl as HTMLElement,
+                                'data-title-processed',
+                                'ReadingView',
+                                this.errorManager,
+                                this.logger
+                            ) !== null;
+                            
+                            if (isProcessed) return;
+                            
+                            // 从缓存获取显示标题
+                            const displayTitle = this.getDisplayTitle(originalFileName);
+                            
+                            if (displayTitle && displayTitle !== originalFileName) {
+                                // 更新链接显示文本
+                                (linkEl as HTMLElement).textContent = displayTitle;
+                                
+                                // 保留原始文本作为提示
+                                (linkEl as HTMLElement).title = originalFileName;
+                                
+                                // 标记为已处理
+                                setAttribute(
+                                    linkEl as HTMLElement,
+                                    'data-title-processed',
+                                    'true',
+                                    'ReadingView',
+                                    this.errorManager,
+                                    this.logger
+                                );
+                            }
+                        },
+                        'ReadingView',
+                        this.errorManager,
+                        this.logger,
+                        {
+                            errorMessage: '处理单个预览链接失败',
+                            category: ErrorCategory.UI,
+                            level: ErrorLevel.DEBUG,
+                            details: { 
+                                linkHref: getAttribute(
+                                    linkEl as HTMLElement,
+                                    'data-href',
+                                    'ReadingView',
+                                    this.errorManager,
+                                    this.logger
+                                ) || 'unknown' 
+                            }
+                        }
+                    );
                 });
                 
                 return true;
             },
-            this.constructor.name,
+            'ReadingView',
             this.errorManager,
             this.logger,
             {
@@ -162,7 +280,7 @@ export class ReadingView {
                 
                 return displayTitle;
             },
-            this.constructor.name,
+            'ReadingView',
             this.errorManager,
             this.logger,
             {
@@ -188,7 +306,7 @@ export class ReadingView {
                     file.path === `${fileName}.md`
                 ) || null;
             },
-            this.constructor.name,
+            'ReadingView',
             this.errorManager,
             this.logger,
             {
