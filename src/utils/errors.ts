@@ -9,6 +9,14 @@ export enum ErrorCategory {
   REGEX = 'REGEX',      // 正则表达式错误
   UI = 'UI',         // UI交互错误
   NETWORK = 'NETWORK',    // 网络相关错误
+  PARSER = 'PARSER',    // 解析错误
+  DATA = 'DATA',      // 数据处理错误
+  LIFECYCLE = 'LIFECYCLE', // 生命周期错误
+  PERFORMANCE = 'PERFORMANCE', // 性能相关错误
+  EDITOR = 'EDITOR',    // 编辑器相关错误
+  DECORATION = 'DECORATION', // 装饰/渲染相关错误
+  API = 'API',       // API调用错误
+  VALIDATION = 'VALIDATION', // 数据验证错误
   UNKNOWN = 'UNKNOWN'     // 未知错误
 }
 
@@ -98,5 +106,109 @@ export class NetworkError extends TitleChangerError {
       category: ErrorCategory.NETWORK
     });
     this.name = 'NetworkError';
+  }
+}
+
+/**
+ * 解析错误
+ */
+export class ParserError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.PARSER
+    });
+    this.name = 'ParserError';
+  }
+}
+
+/**
+ * 数据处理错误
+ */
+export class DataError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.DATA
+    });
+    this.name = 'DataError';
+  }
+}
+
+/**
+ * 生命周期错误
+ */
+export class LifecycleError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.LIFECYCLE
+    });
+    this.name = 'LifecycleError';
+  }
+}
+
+/**
+ * 性能相关错误
+ */
+export class PerformanceError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.PERFORMANCE
+    });
+    this.name = 'PerformanceError';
+  }
+}
+
+/**
+ * 编辑器相关错误
+ */
+export class EditorError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.EDITOR
+    });
+    this.name = 'EditorError';
+  }
+}
+
+/**
+ * 装饰/渲染相关错误
+ */
+export class DecorationError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.DECORATION
+    });
+    this.name = 'DecorationError';
+  }
+}
+
+/**
+ * API调用错误
+ */
+export class ApiError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.API
+    });
+    this.name = 'ApiError';
+  }
+}
+
+/**
+ * 数据验证错误
+ */
+export class ValidationError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.VALIDATION
+    });
+    this.name = 'ValidationError';
   }
 } 

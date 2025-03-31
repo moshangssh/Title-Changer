@@ -1,4 +1,4 @@
-import { ErrorCategory, TitleChangerError } from './errors';
+import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './errors';
 import { ErrorLevel, ErrorManagerService } from '../services/error-manager.service';
 import { Logger } from './logger';
 
@@ -281,4 +281,229 @@ export function safeRegexExecution(
       details: { regex: regex.toString(), input }
     }
   );
+}
+
+/**
+ * 检测并处理潜在性能问题
+ * @param operation 要执行的操作
+ * @param component 组件名称
+ * @param thresholdMs 性能阈值(毫秒)
+ * @param errorManager 错误管理服务
+ * @param logger 日志服务
+ * @returns 操作结果
+ */
+export function measurePerformance<T>(
+  operation: () => T,
+  component: string,
+  thresholdMs: number,
+  errorManager: ErrorManagerService,
+  logger: Logger
+): T {
+  const start = performance.now();
+  const result = operation();
+  const duration = performance.now() - start;
+  
+  if (duration > thresholdMs) {
+    logger.warn(`性能警告: ${component} 操作耗时 ${duration.toFixed(2)}ms，超过阈值 ${thresholdMs}ms`);
+    errorManager.handleError(
+      new TitleChangerError(`操作执行时间过长`, {
+        sourceComponent: component,
+        category: ErrorCategory.PERFORMANCE,
+        details: { duration, thresholdMs, component },
+        userVisible: false
+      }),
+      ErrorLevel.WARNING
+    );
+  }
+  
+  return result;
+}
+
+/**
+ * 检测并处理潜在性能问题（异步版本）
+ * @param promise 要执行的异步操作
+ * @param component 组件名称
+ * @param thresholdMs 性能阈值(毫秒)
+ * @param errorManager 错误管理服务
+ * @param logger 日志服务
+ * @returns 操作结果的Promise
+ */
+export async function measureAsyncPerformance<T>(
+  promise: Promise<T>,
+  component: string,
+  thresholdMs: number,
+  errorManager: ErrorManagerService,
+  logger: Logger
+): Promise<T> {
+  const start = performance.now();
+  const result = await promise;
+  const duration = performance.now() - start;
+  
+  if (duration > thresholdMs) {
+    logger.warn(`性能警告: ${component} 异步操作耗时 ${duration.toFixed(2)}ms，超过阈值 ${thresholdMs}ms`);
+    errorManager.handleError(
+      new TitleChangerError(`异步操作执行时间过长`, {
+        sourceComponent: component,
+        category: ErrorCategory.PERFORMANCE,
+        details: { duration, thresholdMs, component },
+        userVisible: false
+      }),
+      ErrorLevel.WARNING
+    );
+  }
+  
+  return result;
+}
+
+/**
+ * 验证数据并在无效时抛出错误
+ * @param data 要验证的数据
+ * @param validator 验证函数
+ * @param errorMessage 错误消息
+ * @throws {ValidationError} 如果数据无效
+ */
+export function validateData<T>(
+  data: T,
+  validator: (data: T) => boolean,
+  errorMessage: string,
+  component: string
+): T {
+  if (!validator(data)) {
+    throw new ValidationError(errorMessage, {
+      sourceComponent: component,
+      details: { invalidData: data }
+    });
+  }
+  return data;
+}
+
+/**
+ * 带数据验证的Try-Catch包装器
+ * @param operation 要执行的操作
+ * @param validator 结果验证函数
+ * @param component 组件名称
+ * @param errorManager 错误管理服务
+ * @param logger 日志服务
+ * @param options 选项
+ * @returns 验证通过的结果或null
+ */
+export function tryCatchWithValidation<T>(
+  operation: () => T,
+  validator: (result: T) => boolean,
+  component: string,
+  errorManager: ErrorManagerService,
+  logger: Logger,
+  options?: {
+    errorMessage?: string;
+    validationErrorMessage?: string;
+    category?: ErrorCategory;
+    level?: ErrorLevel;
+    userVisible?: boolean;
+    details?: Record<string, unknown>;
+  }
+): T | null {
+  try {
+    const result = operation();
+    if (!validator(result)) {
+      throw new ValidationError(
+        options?.validationErrorMessage || '数据验证失败',
+        {
+          sourceComponent: component,
+          details: { invalidResult: result, ...options?.details }
+        }
+      );
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      errorManager.handleError(error, options?.level || ErrorLevel.WARNING);
+    } else {
+      const errorObj = new TitleChangerError(
+        options?.errorMessage || '操作失败',
+        {
+          sourceComponent: component,
+          category: options?.category || ErrorCategory.UNKNOWN,
+          details: { ...options?.details, originalError: error },
+          userVisible: options?.userVisible ?? false
+        }
+      );
+      
+      errorManager.handleError(errorObj, options?.level || ErrorLevel.ERROR);
+    }
+    return null;
+  }
+}
+
+/**
+ * 编辑器特定错误处理包装器
+ * @param operation 要执行的编辑器相关操作
+ * @param component 组件名称
+ * @param errorManager 错误管理服务
+ * @param logger 日志服务
+ * @param options 选项
+ * @returns 操作结果或null
+ */
+export function handleEditorOperation<T>(
+  operation: () => T,
+  component: string,
+  errorManager: ErrorManagerService,
+  logger: Logger,
+  options?: {
+    errorMessage?: string;
+    userVisible?: boolean;
+    details?: Record<string, unknown>;
+  }
+): T | null {
+  try {
+    return operation();
+  } catch (error) {
+    const errorObj = new EditorError(
+      options?.errorMessage || '编辑器操作失败',
+      {
+        sourceComponent: component,
+        details: { ...options?.details, originalError: error },
+        userVisible: options?.userVisible ?? true
+      }
+    );
+    
+    errorManager.handleError(errorObj, ErrorLevel.ERROR);
+    return null;
+  }
+}
+
+/**
+ * 数据处理错误处理包装器
+ * @param operation 要执行的数据处理操作
+ * @param component 组件名称
+ * @param errorManager 错误管理服务
+ * @param logger 日志服务
+ * @param options 选项
+ * @returns 操作结果或null
+ */
+export function handleDataOperation<T>(
+  operation: () => T,
+  component: string,
+  errorManager: ErrorManagerService,
+  logger: Logger,
+  options?: {
+    errorMessage?: string;
+    userVisible?: boolean;
+    details?: Record<string, unknown>;
+  }
+): T | null {
+  try {
+    return operation();
+  } catch (error) {
+    const errorObj = new DataError(
+      options?.errorMessage || '数据处理操作失败',
+      {
+        sourceComponent: component,
+        details: { ...options?.details, originalError: error },
+        userVisible: options?.userVisible ?? false
+      }
+    );
+    
+    errorManager.handleError(errorObj, ErrorLevel.WARNING);
+    return null;
+  }
 } 
