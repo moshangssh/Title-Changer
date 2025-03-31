@@ -1,14 +1,28 @@
 import { EditorView, ViewUpdate } from '@codemirror/view';
-import { TitleChangerPlugin } from '../main';
-import { ICacheManager } from '../types/obsidian-extensions';
+import type { TitleChangerPlugin } from '../main';
+import type { ICacheManager } from '../types/obsidian-extensions';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '../types/symbols';
+import type { ErrorManagerService } from './error-manager.service';
+import { ErrorLevel } from './error-manager.service';
 
+@injectable()
 export class ViewportManager {
   private readonly plugin: TitleChangerPlugin;
   private readonly cacheManager: ICacheManager;
+  private readonly errorManager: ErrorManagerService;
 
-  constructor(plugin: TitleChangerPlugin, cacheManager: ICacheManager) {
+  // 使用 WeakMap 存储每个编辑器视图的处理状态
+  private readonly processedRanges: WeakMap<EditorView, { from: number; to: number }> = new WeakMap();
+
+  constructor(
+    @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
+    @inject(TYPES.CacheManager) cacheManager: ICacheManager,
+    @inject(TYPES.ErrorManager) errorManager: ErrorManagerService
+  ) {
     this.plugin = plugin;
     this.cacheManager = cacheManager;
+    this.errorManager = errorManager;
   }
 
   /**
@@ -24,9 +38,24 @@ export class ViewportManager {
         return;
       }
 
+      // 检查是否需要处理当前范围
+      const currentRange = this.processedRanges.get(view);
+      const { from, to } = view.viewport;
+      
+      if (currentRange && !docChanged) {
+        // 如果当前范围完全包含视口，且文档未变更，则跳过处理
+        if (currentRange.from <= from && currentRange.to >= to) {
+          return;
+        }
+      }
+
       this.processVisibleContent(view);
     } catch (error) {
-      console.error('处理视口更新时出错:', error);
+      this.errorManager.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        ErrorLevel.ERROR,
+        { location: 'ViewportManager.handleViewportUpdate' }
+      );
     }
   }
 
@@ -38,16 +67,32 @@ export class ViewportManager {
     const { from, to } = view.viewport;
     const { doc } = view.state;
     
-    // 添加缓冲区以提高滚动性能
-    const bufferSize = 1000; // 1000个字符的缓冲区
-    const processFrom = Math.max(0, from - bufferSize);
-    const processTo = Math.min(doc.length, to + bufferSize);
+    // 动态计算缓冲区大小
+    const lineCount = doc.lines;
+    const dynamicBufferSize = Math.min(
+      1000, // 最大缓冲区大小
+      Math.max(100, Math.floor(lineCount * 0.1)) // 至少 100 字符，最多文档长度的 10%
+    );
 
-    let pos = processFrom;
-    while (pos <= processTo) {
-      const line = doc.lineAt(pos);
-      this.processLine(line.text, line.from);
-      pos = line.to + 1;
+    const processFrom = Math.max(0, from - dynamicBufferSize);
+    const processTo = Math.min(doc.length, to + dynamicBufferSize);
+
+    try {
+      let pos = processFrom;
+      while (pos <= processTo) {
+        const line = doc.lineAt(pos);
+        this.processLine(line.text, line.from);
+        pos = line.to + 1;
+      }
+
+      // 更新已处理范围
+      this.processedRanges.set(view, { from: processFrom, to: processTo });
+    } catch (error) {
+      this.errorManager.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        ErrorLevel.WARNING,
+        { location: 'ViewportManager.processVisibleContent' }
+      );
     }
   }
 
@@ -57,18 +102,26 @@ export class ViewportManager {
    * @param lineStart 行起始位置
    */
   private processLine(lineText: string, lineStart: number): void {
-    // 使用正则表达式匹配内部链接
-    const linkRegex = /\[\[(.*?)\]\]/g;
-    let match;
+    try {
+      // 使用正则表达式匹配内部链接
+      const linkRegex = /\[\[(.*?)\]\]/g;
+      let match;
 
-    while ((match = linkRegex.exec(lineText)) !== null) {
-      const linkText = match[1];
-      const displayTitle = this.cacheManager.getDisplayTitle(linkText);
-      
-      if (displayTitle && displayTitle !== linkText) {
-        // 更新缓存
-        this.cacheManager.updateTitleCache(linkText, displayTitle);
+      while ((match = linkRegex.exec(lineText)) !== null) {
+        const linkText = match[1];
+        const displayTitle = this.cacheManager.getDisplayTitle(linkText);
+        
+        if (displayTitle && displayTitle !== linkText) {
+          // 更新缓存
+          this.cacheManager.updateTitleCache(linkText, displayTitle);
+        }
       }
+    } catch (error) {
+      this.errorManager.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        ErrorLevel.WARNING,
+        { location: 'ViewportManager.processLine', lineText }
+      );
     }
   }
 } 
