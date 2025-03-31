@@ -1,11 +1,18 @@
 {
 	"id": "title-changer",
 	"name": "Title Changer",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "使用正则表达式从文件名中提取特定内容作为显示名称",
-	"author": "YourName",
-	"authorUrl": "https://github.com/YourUsername",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"description": "使用正则表达式从文件名中提取特定内容作为显示名称，支持自定义规则和实时预览",
+	"author": "qmzpgh",
+	"authorUrl": "https://github.com/qmzpgh",
+	"fundingUrl": "",
+	"isDesktopOnly": false,
+	"repository": "https://github.com/qmzpgh/title-changer",
+	"keywords": [
+		"title",
+		"rename",
+		"regex",
+		"file-explorer"
+	]
 }

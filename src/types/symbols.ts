@@ -8,6 +8,7 @@ export const TYPES = {
   // 管理器
   CacheManager: Symbol.for("CacheManager"),
   ViewManager: Symbol.for("ViewManager"),
+  ErrorManager: Symbol.for("ErrorManager"),
 
   // 视图
   ExplorerView: Symbol.for("ExplorerView"),

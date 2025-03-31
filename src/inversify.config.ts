@@ -17,6 +17,7 @@ import { Logger } from "./utils/logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
 import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/obsidian-extensions";
 import { LinkTransformerService } from "./services/link-transformer.service";
+import { ErrorManagerService } from "./services/error-manager.service";
 
 /**
  * 创建并配置 InversifyJS 容器
@@ -35,6 +36,7 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     // 注册管理器（单例）
     container.bind<ICacheManager>(TYPES.CacheManager).to(CacheManager).inSingletonScope();
     container.bind<IViewManager>(TYPES.ViewManager).to(ViewManager).inSingletonScope();
+    container.bind<ErrorManagerService>(TYPES.ErrorManager).to(ErrorManagerService).inSingletonScope();
     
     // 注册视图（单例）
     container.bind(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();

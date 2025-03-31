@@ -1,12 +1,13 @@
 import { EditorView, ViewUpdate } from '@codemirror/view';
+import type { Extension } from '@codemirror/state';
+import type { ViewPlugin, PluginValue } from '@codemirror/view';
 import { Workspace, WorkspaceLeaf, MarkdownView, TFile } from 'obsidian';
-import { ViewPlugin } from '@codemirror/view';
 
 /**
  * 扩展的 Workspace 接口，包含编辑器扩展相关方法
  */
 export interface ExtendedWorkspace extends Workspace {
-    registerEditorExtension(extension: any): Symbol;
+    registerEditorExtension(extension: Extension | Extension[]): Symbol;
     unregisterEditorExtension(extension: Symbol): void;
 }
 
@@ -80,7 +81,7 @@ export interface IDOMSelectorService {
 /**
  * 编辑器扩展类型
  */
-export type EditorExtensionType = ViewPlugin<any> | any;
+export type EditorExtensionType = ViewPlugin<PluginValue> | Extension;
 
 /**
  * 编辑器扩展标识符

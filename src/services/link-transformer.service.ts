@@ -3,13 +3,15 @@ import { TitleChangerSettings } from '../settings';
 import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import { TFile } from 'obsidian';
+import { ErrorManagerService, ErrorLevel } from './error-manager.service';
 
 @injectable()
 export class LinkTransformerService {
-    private settings: TitleChangerSettings;
+    private settings!: TitleChangerSettings;
 
     constructor(
-        @inject(TYPES.CacheManager) private cacheManager: CacheManager
+        @inject(TYPES.CacheManager) private cacheManager: CacheManager,
+        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {}
 
     setSettings(settings: TitleChangerSettings) {
@@ -39,7 +41,10 @@ export class LinkTransformerService {
                     return match[1]; // 返回第一个捕获组
                 }
             } catch (regexError) {
-                console.error('Title Changer: 正则表达式错误', regexError);
+                this.errorManager.handleError(regexError as Error, ErrorLevel.WARNING, {
+                    feature: '正则表达式处理',
+                    pattern: this.settings.regexPattern
+                });
             }
 
             // 回退到简单的前缀移除模式
@@ -52,7 +57,10 @@ export class LinkTransformerService {
 
             return transformed;
         } catch (error) {
-            console.error('Title Changer: 转换链接文本时出错', error);
+            this.errorManager.handleError(error as Error, ErrorLevel.ERROR, {
+                feature: '链接文本转换',
+                text
+            });
             return text;
         }
     }
@@ -65,13 +73,14 @@ export class LinkTransformerService {
         try {
             const internalLinks = element.querySelectorAll('a.internal-link');
             
-            internalLinks.forEach((link: HTMLElement) => {
+            internalLinks.forEach((link: Element) => {
                 // 跳过已处理的链接
                 if (link.hasAttribute('data-title-processed')) return;
                 
+                const linkElement = link as HTMLElement;
                 // 获取原始文件名
-                const href = link.getAttribute('href');
-                const originalFileName = href?.replace(/^#/, '') || link.getAttribute('data-href');
+                const href = linkElement.getAttribute('href');
+                const originalFileName = href?.replace(/^#/, '') || linkElement.getAttribute('data-href');
                 if (!originalFileName) return;
                 
                 // 获取显示标题
@@ -83,7 +92,7 @@ export class LinkTransformerService {
                 
                 // 如果缓存中没有，尝试处理链接文本
                 if (!displayTitle) {
-                    const linkText = link.innerText;
+                    const linkText = linkElement.innerText;
                     const transformedText = this.transformLinkText(linkText);
                     
                     if (transformedText !== linkText) {
@@ -92,18 +101,21 @@ export class LinkTransformerService {
                 }
                 
                 // 更新链接显示
-                if (displayTitle && displayTitle !== link.innerText) {
-                    link.innerText = displayTitle;
+                if (displayTitle && displayTitle !== linkElement.innerText) {
+                    linkElement.innerText = displayTitle;
                     
                     // 保留原始文本作为 title 属性以便悬停查看
-                    link.title = originalFileName;
+                    linkElement.title = originalFileName;
                     
                     // 标记为已处理
-                    link.setAttribute('data-title-processed', 'true');
+                    linkElement.setAttribute('data-title-processed', 'true');
                 }
             });
         } catch (error) {
-            console.error('Title Changer: 处理内部链接时发生错误', error);
+            this.errorManager.handleError(error as Error, ErrorLevel.ERROR, {
+                feature: '内部链接处理',
+                element
+            });
         }
     }
 } 
