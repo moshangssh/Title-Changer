@@ -5,6 +5,10 @@ import type { TitleChangerSettings } from './settings';
 import { FolderChecker } from './utils/folder-checker';
 import { TitleProcessor } from './utils/title-processor';
 import type { ICacheManager } from './types/obsidian-extensions';
+import { Logger } from './utils/logger';
+import { ErrorManagerService } from './services/error-manager.service';
+import { ErrorCategory } from './utils/errors';
+import { tryCatchWrapper } from './utils/error-helpers';
 
 /**
  * 缓存管理器，用于存储和管理文件名处理结果的缓存
@@ -12,12 +16,13 @@ import type { ICacheManager } from './types/obsidian-extensions';
 @injectable()
 export class CacheManager implements ICacheManager {
     private readonly titleCache: Map<string, string | null> = new Map();
-    private readonly logger = console;
 
     constructor(
-        @inject(TYPES.Settings) private settings: TitleChangerSettings
+        @inject(TYPES.Settings) private settings: TitleChangerSettings,
+        @inject(TYPES.Logger) private logger: Logger,
+        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {
-        this.logger.log('Title Changer: 缓存管理器初始化完成');
+        this.logger.info('缓存管理器初始化完成');
     }
 
     /**
@@ -25,7 +30,7 @@ export class CacheManager implements ICacheManager {
      */
     private logSettingsState(): void {
         if (process.env.NODE_ENV === 'development') {
-            this.logger.debug('Title Changer: 当前设置状态:', {
+            this.logger.debug('当前设置状态:', {
                 regexPattern: this.settings.regexPattern,
                 folderRestrictionEnabled: this.settings.folderRestrictionEnabled,
                 includedFolders: this.settings.folderRestrictionEnabled 
@@ -39,46 +44,60 @@ export class CacheManager implements ICacheManager {
      * 更新设置并处理缓存
      */
     updateSettings(newSettings: TitleChangerSettings): void {
-        try {
-            const hasSettingsChanged = this.hasSettingsChanged(newSettings);
-            if (hasSettingsChanged) {
-                this.logger.info('Title Changer: 检测到设置变更，清空缓存');
-                this.clearCache();
-            }
+        tryCatchWrapper(
+            () => {
+                const hasSettingsChanged = this.hasSettingsChanged(newSettings);
+                if (hasSettingsChanged) {
+                    this.logger.info('检测到设置变更，清空缓存');
+                    this.clearCache();
+                }
 
-            this.settings = newSettings;
-            this.logSettingsState();
-        } catch (error) {
-            this.logger.error('Title Changer: 更新设置时发生错误', error);
-        }
+                this.settings = newSettings;
+                this.logSettingsState();
+                return true;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '更新设置时发生错误',
+                category: ErrorCategory.CONFIG,
+                userVisible: false
+            }
+        );
     }
 
     /**
      * 处理文件并返回显示标题
      */
     processFile(file: TFile): string | null {
-        try {
-            const fileId = file.path;
-            
-            if (this.titleCache.has(fileId)) {
-                return this.titleCache.get(fileId) ?? null;
-            }
+        return tryCatchWrapper(
+            () => {
+                const fileId = file.path;
+                
+                if (this.titleCache.has(fileId)) {
+                    return this.titleCache.get(fileId) ?? null;
+                }
 
-            if (!FolderChecker.shouldApplyToFile(file, this.settings)) {
-                this.titleCache.set(fileId, null);
-                return null;
-            }
+                if (!FolderChecker.shouldApplyToFile(file, this.settings)) {
+                    this.titleCache.set(fileId, null);
+                    return null;
+                }
 
-            const displayTitle = TitleProcessor.processFile(file, this.settings);
-            this.titleCache.set(fileId, displayTitle);
-            return displayTitle;
-        } catch (error) {
-            this.logger.error('Title Changer: 处理文件时发生错误', {
-                fileName: file.name,
-                error
-            });
-            return null;
-        }
+                const displayTitle = TitleProcessor.processFile(file, this.settings, this.errorManager, this.logger);
+                this.titleCache.set(fileId, displayTitle);
+                return displayTitle;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '处理文件时发生错误',
+                category: ErrorCategory.FILE,
+                details: { fileName: file.name },
+                userVisible: false
+            }
+        );
     }
 
     /**
@@ -87,25 +106,32 @@ export class CacheManager implements ICacheManager {
     clearCache(): void {
         const cacheSize = this.titleCache.size;
         this.titleCache.clear();
-        this.logger.debug(`Title Changer: 已清除 ${cacheSize} 条缓存记录`);
+        this.logger.debug(`已清除 ${cacheSize} 条缓存记录`);
     }
 
     /**
      * 使指定文件的缓存失效
      */
     invalidateFile(file: TFile): void {
-        try {
-            const fileId = file.path;
-            if (this.titleCache.has(fileId)) {
-                this.titleCache.delete(fileId);
-                this.logger.debug(`Title Changer: 已清除文件 ${file.name} 的缓存`);
+        tryCatchWrapper(
+            () => {
+                const fileId = file.path;
+                if (this.titleCache.has(fileId)) {
+                    this.titleCache.delete(fileId);
+                    this.logger.debug(`已清除文件 ${file.name} 的缓存`);
+                }
+                return true;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '清除文件缓存时发生错误',
+                category: ErrorCategory.FILE,
+                details: { fileName: file.name },
+                userVisible: false
             }
-        } catch (error) {
-            this.logger.error('Title Changer: 清除文件缓存时发生错误', {
-                fileName: file.name,
-                error
-            });
-        }
+        );
     }
 
     /**
@@ -114,7 +140,7 @@ export class CacheManager implements ICacheManager {
     private hasSettingsChanged(newSettings: TitleChangerSettings): boolean {
         return this.settings.regexPattern !== newSettings.regexPattern ||
                this.settings.folderRestrictionEnabled !== newSettings.folderRestrictionEnabled ||
-               JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders);
+               JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders)
     }
 
     getDisplayTitle(fileName: string): string | null {

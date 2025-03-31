@@ -3,6 +3,10 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import { CacheManager } from '../cache-manager';
+import { Logger } from '../utils/logger';
+import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
+import { ErrorCategory } from '../utils/errors';
+import { tryCatchWrapper } from '../utils/error-helpers';
 
 /**
  * 阅读视图组件，负责处理预览模式中的标题显示
@@ -11,7 +15,9 @@ import { CacheManager } from '../cache-manager';
 export class ReadingView {
     constructor(
         @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
-        @inject(TYPES.CacheManager) private cacheManager: CacheManager
+        @inject(TYPES.CacheManager) private cacheManager: CacheManager,
+        @inject(TYPES.Logger) private logger: Logger,
+        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {}
 
     /**
@@ -88,81 +94,110 @@ export class ReadingView {
      * 处理预览模式中的所有链接
      */
     private processPreviewLinks(containerEl: HTMLElement): void {
-        try {
-            // 查找预览模式中的所有内部链接
-            const internalLinks = containerEl.querySelectorAll('.internal-link');
-            
-            internalLinks.forEach(linkEl => {
-                // 获取链接的原始文件名
-                const originalFileName = linkEl.getAttribute('data-href');
-                if (!originalFileName) return;
+        tryCatchWrapper(
+            () => {
+                // 查找预览模式中的所有内部链接
+                const internalLinks = containerEl.querySelectorAll('.internal-link');
                 
-                // 跳过已有自定义显示文本的链接
-                if (linkEl.hasAttribute('data-link-text')) return;
-                
-                // 跳过已处理过的链接
-                if (linkEl.hasAttribute('data-title-processed')) return;
-                
-                // 从缓存获取显示标题
-                const displayTitle = this.getDisplayTitle(originalFileName);
-                
-                if (displayTitle && displayTitle !== originalFileName) {
-                    // 更新链接显示文本
-                    linkEl.textContent = displayTitle;
+                internalLinks.forEach(linkEl => {
+                    // 获取链接的原始文件名
+                    const originalFileName = linkEl.getAttribute('data-href');
+                    if (!originalFileName) return;
                     
-                    // 保留原始文本作为提示
-                    (linkEl as HTMLElement).title = originalFileName;
+                    // 跳过已有自定义显示文本的链接
+                    if (linkEl.hasAttribute('data-link-text')) return;
                     
-                    // 标记为已处理
-                    linkEl.setAttribute('data-title-processed', 'true');
-                }
-            });
-        } catch (error) {
-            console.error('Title Changer: 处理阅读视图链接时发生错误', error);
-        }
+                    // 跳过已处理过的链接
+                    if (linkEl.hasAttribute('data-title-processed')) return;
+                    
+                    // 从缓存获取显示标题
+                    const displayTitle = this.getDisplayTitle(originalFileName);
+                    
+                    if (displayTitle && displayTitle !== originalFileName) {
+                        // 更新链接显示文本
+                        linkEl.textContent = displayTitle;
+                        
+                        // 保留原始文本作为提示
+                        (linkEl as HTMLElement).title = originalFileName;
+                        
+                        // 标记为已处理
+                        linkEl.setAttribute('data-title-processed', 'true');
+                    }
+                });
+                
+                return true;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '处理阅读视图链接时发生错误',
+                category: ErrorCategory.UI,
+                level: ErrorLevel.ERROR,
+                userVisible: false
+            }
+        );
     }
 
     /**
      * 从缓存获取显示标题
      */
     private getDisplayTitle(fileName: string): string | null {
-        try {
-            // 移除文件扩展名
-            const baseName = fileName.replace(/\.[^.]+$/, '');
-            
-            // 尝试从缓存获取标题
-            let displayTitle = this.cacheManager.getDisplayTitle(baseName);
-            
-            // 如果缓存中没有找到，尝试处理文件
-            if (!displayTitle) {
-                // 查找匹配的文件
-                const file = this.findFile(baseName);
-                if (file) {
-                    displayTitle = this.cacheManager.processFile(file);
+        return tryCatchWrapper(
+            () => {
+                // 移除文件扩展名
+                const baseName = fileName.replace(/\.[^.]+$/, '');
+                
+                // 尝试从缓存获取标题
+                let displayTitle = this.cacheManager.getDisplayTitle(baseName);
+                
+                // 如果缓存中没有找到，尝试处理文件
+                if (!displayTitle) {
+                    // 查找匹配的文件
+                    const file = this.findFile(baseName);
+                    if (file) {
+                        displayTitle = this.cacheManager.processFile(file);
+                    }
                 }
+                
+                return displayTitle;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '获取显示标题时发生错误',
+                category: ErrorCategory.FILE,
+                level: ErrorLevel.WARNING,
+                details: { fileName },
+                userVisible: false
             }
-            
-            return displayTitle;
-        } catch (error) {
-            console.error('Title Changer: 获取显示标题时发生错误', error);
-            return null;
-        }
+        );
     }
     
     /**
      * 查找匹配的文件
      */
     private findFile(fileName: string): TFile | null {
-        try {
-            const files = this.plugin.app.vault.getMarkdownFiles();
-            return files.find(file => 
-                file.basename === fileName || 
-                file.path === fileName || 
-                file.path === `${fileName}.md`
-            ) || null;
-        } catch (error) {
-            console.error('Title Changer: 查找文件时发生错误', error);
-            return null;
-        }
+        return tryCatchWrapper(
+            () => {
+                const files = this.plugin.app.vault.getMarkdownFiles();
+                return files.find(file => 
+                    file.basename === fileName || 
+                    file.path === fileName || 
+                    file.path === `${fileName}.md`
+                ) || null;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '查找文件时发生错误',
+                category: ErrorCategory.FILE,
+                level: ErrorLevel.WARNING,
+                details: { fileName },
+                userVisible: false
+            }
+        );
     }
 } 

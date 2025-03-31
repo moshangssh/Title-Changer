@@ -48,7 +48,9 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind<IDOMSelectorService>(TYPES.DOMSelectorService).to(DOMSelectorService).inSingletonScope();
     container.bind(TYPES.ExplorerStateService).to(ExplorerStateService).inSingletonScope();
     container.bind(TYPES.ExplorerEventsService).to(ExplorerEventsService).inSingletonScope();
-    container.bind(TYPES.Logger).to(Logger).inSingletonScope();
+    container.bind<Logger>(TYPES.Logger).toDynamicValue(() => {
+        return new Logger(plugin);
+    }).inSingletonScope();
     container.bind<IEditorExtensionManager>(TYPES.EditorExtensionManager).to(EditorExtensionManager).inSingletonScope();
     container.bind(TYPES.LinkTransformerService).to(LinkTransformerService).inSingletonScope();
     

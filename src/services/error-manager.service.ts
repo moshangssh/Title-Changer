@@ -2,6 +2,7 @@ import { App, Notice } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { TitleChangerPlugin } from '../main';
+import { ErrorCategory, TitleChangerError } from '../utils/errors';
 
 export enum ErrorLevel {
     DEBUG = 0,
@@ -13,8 +14,11 @@ export enum ErrorLevel {
 
 export interface ErrorContext {
     message: string;
-    context?: Record<string, any>;
+    category: ErrorCategory;
+    sourceComponent: string;
+    details?: Record<string, unknown>; // 使用 unknown 代替 any
     stack?: string;
+    userVisible?: boolean; // 是否需要通知用户
 }
 
 @injectable()
@@ -34,19 +38,42 @@ export class ErrorManagerService {
      * @param level 错误级别
      * @param context 错误上下文
      */
-    handleError(error: Error | string, level: ErrorLevel, context?: Record<string, any>): void {
-        const errorContext: ErrorContext = {
-            message: error instanceof Error ? error.message : error,
-            context,
-            stack: error instanceof Error ? error.stack : undefined
-        };
-
+    handleError(error: Error | TitleChangerError | string, level?: ErrorLevel, context?: Record<string, unknown>): void {
+        let errorObj: ErrorContext;
+        
+        if (error instanceof TitleChangerError) {
+            errorObj = {
+                message: error.message,
+                category: error.category,
+                sourceComponent: error.sourceComponent,
+                details: error.details,
+                stack: error.stack,
+                userVisible: error.userVisible
+            };
+        } else {
+            // 处理普通错误或字符串
+            const defaultContext: ErrorContext = {
+                message: error instanceof Error ? error.message : String(error),
+                category: ErrorCategory.UNKNOWN,
+                sourceComponent: typeof context?.sourceComponent === 'string' ? context.sourceComponent : 'unknown',
+                stack: error instanceof Error ? error.stack : undefined,
+                userVisible: level !== undefined && level >= ErrorLevel.ERROR
+            };
+            
+            errorObj = { 
+                ...defaultContext, 
+                ...(context ? { details: context } : {}) 
+            };
+        }
+        
         // 记录错误
-        this.logError(level, errorContext);
-
-        // 对于错误和严重错误，显示给用户
-        if (level >= ErrorLevel.ERROR) {
-            this.notifyUser(errorContext);
+        this.logError(level || ErrorLevel.ERROR, errorObj);
+        
+        // 用户通知
+        // 检查是否需要抑制通知
+        const suppressNotification = context?.suppressNotification === true;
+        if (errorObj.userVisible && !suppressNotification) {
+            this.notifyUser(errorObj);
         }
     }
 
@@ -57,15 +84,15 @@ export class ErrorManagerService {
         const timestamp = new Date().toISOString();
         const levelName = ErrorLevel[level];
         
-        console.group(`[Title Changer] ${levelName} - ${timestamp}`);
-        console.error(context.message);
+        console.group(`[Title Changer] [${levelName}] [${context.category}] - ${timestamp}`);
+        console.error(`${context.message} (来源: ${context.sourceComponent})`);
         
-        if (context.context) {
-            console.error('Context:', context.context);
+        if (context.details) {
+            console.error('详情:', context.details);
         }
         
         if (context.stack) {
-            console.error('Stack:', context.stack);
+            console.error('堆栈:', context.stack);
         }
         
         console.groupEnd();

@@ -4,6 +4,9 @@ import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import { TFile } from 'obsidian';
 import { ErrorManagerService, ErrorLevel } from './error-manager.service';
+import { ErrorCategory, RegexError } from '../utils/errors';
+import { convertToTitleChangerError, logErrorsWithoutThrowing, safeRegexCreation, safeRegexExecution } from '../utils/error-helpers';
+import { Logger } from '../utils/logger';
 
 @injectable()
 export class LinkTransformerService {
@@ -11,7 +14,8 @@ export class LinkTransformerService {
 
     constructor(
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
-        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
+        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService,
+        @inject(TYPES.Logger) private logger: Logger
     ) {}
 
     setSettings(settings: TitleChangerSettings) {
@@ -26,43 +30,66 @@ export class LinkTransformerService {
     transformLinkText(text: string): string {
         if (!text) return text;
 
-        try {
+        return logErrorsWithoutThrowing(() => {
             // 检查是否有正则表达式模式
             if (!this.settings.regexPattern || this.settings.regexPattern.trim() === '') {
                 return text;
             }
 
-            // 尝试使用配置的正则表达式进行转换
-            try {
-                const regex = new RegExp(this.settings.regexPattern);
-                const match = text.match(regex);
+            // 使用安全的正则表达式创建
+            const regex = safeRegexCreation(
+                this.settings.regexPattern,
+                '',
+                this.constructor.name,
+                this.errorManager,
+                this.logger
+            );
+            
+            if (regex) {
+                // 使用安全的正则表达式执行
+                const match = safeRegexExecution(
+                    regex,
+                    text,
+                    this.constructor.name,
+                    this.errorManager,
+                    this.logger
+                );
                 
                 if (match && match.length > 1) {
                     return match[1]; // 返回第一个捕获组
                 }
-            } catch (regexError) {
-                this.errorManager.handleError(regexError as Error, ErrorLevel.WARNING, {
-                    feature: '正则表达式处理',
-                    pattern: this.settings.regexPattern
-                });
             }
 
             // 回退到简单的前缀移除模式
-            const transformed = text.replace(/AIGC_\d{4}_\d{2}_\d{2}_(.+)/, '$1');
+            const fallbackRegex = safeRegexCreation(
+                'AIGC_\\d{4}_\\d{2}_\\d{2}_(.+)',
+                '',
+                this.constructor.name,
+                this.errorManager,
+                this.logger
+            );
             
-            // 如果没有变化，返回原文本
-            if (transformed === text) {
-                return text;
+            if (fallbackRegex) {
+                const fallbackMatch = safeRegexExecution(
+                    fallbackRegex,
+                    text,
+                    this.constructor.name,
+                    this.errorManager,
+                    this.logger
+                );
+                
+                if (fallbackMatch && fallbackMatch.length > 1) {
+                    return fallbackMatch[1];
+                }
             }
 
-            return transformed;
-        } catch (error) {
-            this.errorManager.handleError(error as Error, ErrorLevel.ERROR, {
-                feature: '链接文本转换',
-                text
-            });
             return text;
-        }
+        }, this.constructor.name, this.errorManager, this.logger, {
+            errorMessage: '链接文本转换失败',
+            category: ErrorCategory.REGEX,
+            level: ErrorLevel.WARNING,
+            defaultValue: text
+        });
     }
 
     /**
@@ -70,7 +97,7 @@ export class LinkTransformerService {
      * @param element 要处理的 DOM 元素
      */
     processInternalLinks(element: HTMLElement): void {
-        try {
+        logErrorsWithoutThrowing(() => {
             const internalLinks = element.querySelectorAll('a.internal-link');
             
             internalLinks.forEach((link: Element) => {
@@ -111,11 +138,11 @@ export class LinkTransformerService {
                     linkElement.setAttribute('data-title-processed', 'true');
                 }
             });
-        } catch (error) {
-            this.errorManager.handleError(error as Error, ErrorLevel.ERROR, {
-                feature: '内部链接处理',
-                element
-            });
-        }
+        }, this.constructor.name, this.errorManager, this.logger, {
+            errorMessage: '处理内部链接失败',
+            category: ErrorCategory.UI,
+            level: ErrorLevel.ERROR,
+            details: { element: element.tagName }
+        });
     }
 } 

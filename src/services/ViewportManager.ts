@@ -5,12 +5,16 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import type { ErrorManagerService } from './error-manager.service';
 import { ErrorLevel } from './error-manager.service';
+import { ErrorCategory } from '../utils/errors';
+import { convertToTitleChangerError } from '../utils/error-helpers';
+import { Logger } from '../utils/logger';
 
 @injectable()
 export class ViewportManager {
   private readonly plugin: TitleChangerPlugin;
   private readonly cacheManager: ICacheManager;
   private readonly errorManager: ErrorManagerService;
+  private readonly logger: Logger;
 
   // 使用 WeakMap 存储每个编辑器视图的处理状态
   private readonly processedRanges: WeakMap<EditorView, { from: number; to: number }> = new WeakMap();
@@ -18,11 +22,13 @@ export class ViewportManager {
   constructor(
     @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
     @inject(TYPES.CacheManager) cacheManager: ICacheManager,
-    @inject(TYPES.ErrorManager) errorManager: ErrorManagerService
+    @inject(TYPES.ErrorManager) errorManager: ErrorManagerService,
+    @inject(TYPES.Logger) logger: Logger
   ) {
     this.plugin = plugin;
     this.cacheManager = cacheManager;
     this.errorManager = errorManager;
+    this.logger = logger;
   }
 
   /**
@@ -51,10 +57,17 @@ export class ViewportManager {
 
       this.processVisibleContent(view);
     } catch (error) {
+      const titleChangerError = convertToTitleChangerError(
+        error,
+        this.constructor.name,
+        ErrorCategory.UI,
+        true
+      );
+      
       this.errorManager.handleError(
-        error instanceof Error ? error : new Error(String(error)),
+        titleChangerError,
         ErrorLevel.ERROR,
-        { location: 'ViewportManager.handleViewportUpdate' }
+        { location: 'handleViewportUpdate' }
       );
     }
   }
@@ -88,10 +101,17 @@ export class ViewportManager {
       // 更新已处理范围
       this.processedRanges.set(view, { from: processFrom, to: processTo });
     } catch (error) {
+      const titleChangerError = convertToTitleChangerError(
+        error,
+        this.constructor.name,
+        ErrorCategory.UI,
+        false
+      );
+      
       this.errorManager.handleError(
-        error instanceof Error ? error : new Error(String(error)),
+        titleChangerError,
         ErrorLevel.WARNING,
-        { location: 'ViewportManager.processVisibleContent' }
+        { location: 'processVisibleContent' }
       );
     }
   }
@@ -117,10 +137,17 @@ export class ViewportManager {
         }
       }
     } catch (error) {
+      const titleChangerError = convertToTitleChangerError(
+        error,
+        this.constructor.name,
+        ErrorCategory.REGEX,
+        false
+      );
+      
       this.errorManager.handleError(
-        error instanceof Error ? error : new Error(String(error)),
+        titleChangerError,
         ErrorLevel.WARNING,
-        { location: 'ViewportManager.processLine', lineText }
+        { location: 'processLine', lineText }
       );
     }
   }

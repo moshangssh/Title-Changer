@@ -6,6 +6,10 @@ import { TYPES } from '../types/symbols';
 import { CacheManager } from '../cache-manager';
 import type { TitleChangerPlugin } from '../main';
 import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager } from '../types/obsidian-extensions';
+import { Logger } from '../utils/logger';
+import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
+import { ErrorCategory } from '../utils/errors';
+import { isError, convertToTitleChangerError } from '../utils/error-helpers';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
@@ -17,7 +21,9 @@ export class EditorLinkView {
     constructor(
         @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
-        @inject(TYPES.EditorExtensionManager) private extensionManager: IEditorExtensionManager
+        @inject(TYPES.EditorExtensionManager) private extensionManager: IEditorExtensionManager,
+        @inject(TYPES.Logger) private logger: Logger,
+        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {}
 
     /**
@@ -86,7 +92,11 @@ export class EditorLinkView {
                             this.decorations = this.buildDecorations(update.view);
                         }
                     } catch (error) {
-                        console.error('更新装饰时发生错误:', error);
+                        self.errorManager.handleError(
+                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
+                            ErrorLevel.ERROR,
+                            { location: 'update' }
+                        );
                         // 保持现有装饰，避免视图崩溃
                         return;
                     }
@@ -135,7 +145,11 @@ export class EditorLinkView {
                                         );
                                     }
                                 } catch (error) {
-                                    console.error(`处理链接 "${originalFileName}" 时发生错误:`, error);
+                                    self.errorManager.handleError(
+                                        convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
+                                        ErrorLevel.WARNING,
+                                        { location: 'buildDecorations', details: { fileName: originalFileName } }
+                                    );
                                     continue;
                                 }
                             }
@@ -144,7 +158,11 @@ export class EditorLinkView {
                         
                         return builder.finish();
                     } catch (error) {
-                        console.error('构建装饰时发生错误:', error);
+                        self.errorManager.handleError(
+                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
+                            ErrorLevel.ERROR,
+                            { location: 'buildDecorations' }
+                        );
                         return Decoration.none;
                     }
                 }
@@ -158,7 +176,11 @@ export class EditorLinkView {
                         // 使用缓存管理器获取显示标题
                         return this.getCachedDisplayTitle(file) || fileName;
                     } catch (error) {
-                        console.error(`获取显示标题时发生错误: ${error.message}`, error);
+                        self.errorManager.handleError(
+                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.UI),
+                            ErrorLevel.WARNING,
+                            { location: 'getDisplayTitle', details: { fileName } }
+                        );
                         return fileName;
                     }
                 }
@@ -168,7 +190,11 @@ export class EditorLinkView {
                         const files = self.plugin.app.vault.getMarkdownFiles();
                         return files.find(file => file.basename === fileName || file.path === fileName) || null;
                     } catch (error) {
-                        console.error(`查找文件时发生错误: ${error.message}`, error);
+                        self.errorManager.handleError(
+                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.FILE),
+                            ErrorLevel.WARNING,
+                            { location: 'findFile', details: { fileName } }
+                        );
                         return null;
                     }
                 }
@@ -177,7 +203,11 @@ export class EditorLinkView {
                     try {
                         return self.cacheManager.processFile(file);
                     } catch (error) {
-                        console.error(`获取缓存标题时发生错误: ${error.message}`, error);
+                        self.errorManager.handleError(
+                            convertToTitleChangerError(error, 'EditorLinkView', ErrorCategory.FILE),
+                            ErrorLevel.WARNING,
+                            { location: 'getCachedDisplayTitle', details: { filePath: file.path } }
+                        );
                         return null;
                     }
                 }
