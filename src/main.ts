@@ -15,10 +15,10 @@ import { ExplorerEventsService } from './services/explorer-events.service';
 import { LinkTransformerService } from './services/link-transformer.service';
 
 export class TitleChangerPlugin extends Plugin {
-    settings: TitleChangerSettings;
-    private container: Container;
-    private viewManager: ViewManager;
-    private linkTransformer: LinkTransformerService;
+    settings!: TitleChangerSettings;
+    private container!: Container;
+    private viewManager!: ViewManager;
+    private linkTransformer!: LinkTransformerService;
 
     async onload() {
         console.log('加载 Title Changer 插件');

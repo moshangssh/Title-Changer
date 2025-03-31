@@ -13,23 +13,33 @@ export class DOMSelectorService implements IDOMSelectorService {
         alternativeExplorers: [
             '.file-explorer-container',
             '.file-tree-container',
-            '.nav-folder-children'
+            '.nav-folder-children',
+            '.workspace-leaf-content[data-type="file-explorer"] .view-content'
         ],
         fallbackExplorers: [
             '.nav-folder-content',
-            '.workspace-leaf[data-type="file-explorer"]'
+            '.workspace-leaf[data-type="file-explorer"]',
+            '.workspace-leaf-content[data-type="file-explorer"]',
+            '.file-explorer'
         ],
         fileItems: [
             '.nav-file',                     // 标准选择器
             '.tree-item[data-path]',         // 新版Obsidian可能使用的选择器
             '[data-path]:not(.nav-folder)',  // 任何带有data-path的非文件夹元素
-            '.tree-item'                     // 备用选择器
+            '.tree-item:not(.nav-folder)',   // 文件树项目
+            '.is-clickable[aria-label]',     // 可点击元素
+            '.tree-item',                    // 备用选择器
+            '.nav-file-title',               // 文件标题元素
+            '.workspace-leaf-content[data-type="file-explorer"] *[data-path]' // 文件浏览器中所有带路径的元素
         ],
         titleElements: [
             '.nav-file-title-content',       // 标准选择器
             '.tree-item-inner',              // 新版可能使用的选择器
+            '.tree-item-content',            // 文件内容元素
+            '.nav-file-title',               // 文件标题容器
             'div:not([class])',              // 无类的div可能是内容元素
             '[data-path-inner-text]',        // 某些版本可能使用的属性
+            '[aria-label]',                  // 带标签的元素
             'span'                           // 回退到简单元素
         ]
     };
@@ -125,11 +135,43 @@ export class DOMSelectorService implements IDOMSelectorService {
      */
     getFileItems(explorer: HTMLElement): HTMLElement[] {
         try {
+            // 尝试标准选择器集合
             for (const selector of this.standardSelectors.fileItems) {
                 const items = this.safeQuerySelector<HTMLElement>(explorer, selector, true);
                 if (items.length > 0) {
                     return items;
                 }
+            }
+            
+            // 如果标准方法失败，尝试查找任何可能的文件项
+            // 检查具有特定特征的元素：有文本内容、有data属性、可点击等
+            const allElements = this.safeQuerySelector<HTMLElement>(explorer, '*', true);
+            const potentialFileItems = allElements.filter(el => {
+                try {
+                    // 检查是否有data-path属性
+                    if (el.hasAttribute('data-path')) return true;
+                    
+                    // 检查是否有内部文本和可点击特性
+                    if (el.textContent?.trim() && 
+                        (el.classList.contains('is-clickable') || 
+                         el.querySelector('.is-clickable'))) {
+                        return true;
+                    }
+                    
+                    // 检查是否像文件项的一般特征
+                    const hasFileExtension = el.textContent?.includes('.md') || 
+                                           el.textContent?.includes('.txt');
+                    const isTreeItem = el.classList.contains('tree-item') || 
+                                      el.classList.contains('nav-file');
+                    
+                    return hasFileExtension || isTreeItem;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            if (potentialFileItems.length > 0) {
+                return potentialFileItems;
             }
         } catch (error) {
             this.logger.error('Title Changer: 获取文件项时出错', {
@@ -177,10 +219,24 @@ export class DOMSelectorService implements IDOMSelectorService {
      */
     getTitleElement(fileItem: HTMLElement): Element | null {
         try {
+            // 首先通过标准选择器尝试
             for (const selector of this.standardSelectors.titleElements) {
                 const elements = this.safeQuerySelector<Element>(fileItem, selector);
                 if (elements.length > 0) {
                     return elements[0];
+                }
+            }
+            
+            // 如果上面的方法没找到，尝试检查所有子元素
+            const allChildElements = fileItem.querySelectorAll('*');
+            for (const child of Array.from(allChildElements)) {
+                // 检查是否有文本内容的元素
+                if (child.textContent && 
+                    child.textContent.trim() && 
+                    !child.children.length &&
+                    !(child instanceof HTMLInputElement) &&
+                    !(child instanceof HTMLButtonElement)) {
+                    return child;
                 }
             }
         } catch (error) {

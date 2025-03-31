@@ -116,10 +116,23 @@ export class CacheManager implements ICacheManager {
         tryCatchWrapper(
             () => {
                 const fileId = file.path;
+                
+                // 删除特定文件的缓存
                 if (this.titleCache.has(fileId)) {
                     this.titleCache.delete(fileId);
                     this.logger.debug(`已清除文件 ${file.name} 的缓存`);
                 }
+                
+                // 在文件重命名的情况下，可能需要查找并清除旧路径的缓存
+                // 这里使用一个启发式方法：检查缓存中是否有与当前文件basename相同但路径不同的项
+                const entries = Array.from(this.titleCache.entries());
+                for (const [cachedPath, _] of entries) {
+                    if (cachedPath !== fileId && cachedPath.endsWith(file.basename)) {
+                        this.titleCache.delete(cachedPath);
+                        this.logger.debug(`检测到文件重命名，已清除旧路径 ${cachedPath} 的缓存`);
+                    }
+                }
+                
                 return true;
             },
             this.constructor.name,
