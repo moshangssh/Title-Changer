@@ -23,4 +23,9 @@ export const TYPES = {
   Logger: Symbol.for("Logger"),
   EditorExtensionManager: Symbol.for("EditorExtensionManager"),
   LinkTransformerService: Symbol.for('LinkTransformerService'),
+  
+  // 新增服务
+  FileService: Symbol.for("FileService"),
+  TitleService: Symbol.for("TitleService"),
+  UpdateScheduler: Symbol.for("UpdateScheduler"),
 }; 

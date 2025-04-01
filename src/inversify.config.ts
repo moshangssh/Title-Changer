@@ -18,6 +18,9 @@ import { EditorExtensionManager } from "./services/EditorExtensionManager";
 import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/obsidian-extensions";
 import { LinkTransformerService } from "./services/link-transformer.service";
 import { ErrorManagerService } from "./services/error-manager.service";
+import { FileService } from "./services/file.service";
+import { TitleService } from "./services/title.service";
+import { UpdateScheduler } from "./services/update-scheduler.service";
 
 /**
  * 创建并配置 InversifyJS 容器
@@ -53,6 +56,11 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     }).inSingletonScope();
     container.bind<IEditorExtensionManager>(TYPES.EditorExtensionManager).to(EditorExtensionManager).inSingletonScope();
     container.bind(TYPES.LinkTransformerService).to(LinkTransformerService).inSingletonScope();
+    
+    // 注册新服务（单例）
+    container.bind(TYPES.FileService).to(FileService).inSingletonScope();
+    container.bind(TYPES.TitleService).to(TitleService).inSingletonScope();
+    container.bind(TYPES.UpdateScheduler).to(UpdateScheduler).inSingletonScope();
     
     return container;
 } 
