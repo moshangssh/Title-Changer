@@ -1,4 +1,4 @@
-import { MarkdownView, Plugin, TFile, Workspace } from 'obsidian';
+import { MarkdownView, TFile, Workspace } from 'obsidian';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
 import { RangeSetBuilder, Annotation } from '@codemirror/state';
 import { injectable, inject } from 'inversify';
@@ -10,44 +10,45 @@ import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
 import { ErrorCategory } from '../utils/errors';
 import { 
-    isError, 
-    convertToTitleChangerError, 
     handleEditorOperation, 
     tryCatchWithValidation,
-    tryCatchWrapper,
-    logErrorsWithoutThrowing
+    tryCatchWrapper
 } from '../utils/error-helpers';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 import { extractWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
-import { 
-    getAttribute, 
-    createLink, 
-    createSpan, 
-    createDiv, 
-    toggleClass, 
-    querySelector, 
-    querySelectorAll 
-} from '../utils/dom-helpers';
+import { getAttribute } from '../utils/dom-helpers';
+import { AbstractView } from './base/abstract-view';
+import { TitleService } from '../services/title.service';
+import { FileService } from '../services/file.service';
+import { UpdateScheduler } from '../services/update-scheduler.service';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
  */
 @injectable()
-export class EditorLinkView {
+export class EditorLinkView extends AbstractView {
+    private static readonly VIEW_ID = 'editor-view';
     private registeredExtensions: EditorExtensionSymbol[] = [];
 
     constructor(
-        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
+        @inject(TYPES.Logger) logger: Logger,
+        @inject(TYPES.ErrorManager) errorManager: ErrorManagerService,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
         @inject(TYPES.EditorExtensionManager) private extensionManager: IEditorExtensionManager,
-        @inject(TYPES.Logger) private logger: Logger,
-        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
-    ) {}
+        @inject(TYPES.TitleService) private titleService: TitleService,
+        @inject(TYPES.FileService) private fileService: FileService,
+        @inject(TYPES.UpdateScheduler) private updateScheduler: UpdateScheduler
+    ) {
+        super(plugin, logger, errorManager);
+    }
 
     /**
      * 初始化编辑视图
      */
     initialize(): void {
+        this.logInfo(`[${EditorLinkView.VIEW_ID}] 正在初始化...`);
+        
         // 注册编辑器扩展
         this.registerEditorExtension();
         
@@ -84,24 +85,46 @@ export class EditorLinkView {
                 }
             );
         });
+        
+        this.logInfo(`[${EditorLinkView.VIEW_ID}] 初始化完成`);
     }
 
     /**
      * 卸载编辑视图
      */
     unload(): void {
+        this.logInfo(`[${EditorLinkView.VIEW_ID}] 正在卸载...`);
+        
         // 移除所有注册的扩展
         this.registeredExtensions.forEach(symbol => {
             this.extensionManager.unregisterExtension(symbol);
         });
         this.registeredExtensions = [];
+        
+        this.logInfo(`[${EditorLinkView.VIEW_ID}] 卸载完成`);
     }
 
     /**
      * 更新视图
      */
     updateView(): void {
-        this.extensionManager.refreshAll();
+        this.logDebug(`[${EditorLinkView.VIEW_ID}] 正在更新视图...`);
+        
+        // 使用更新调度器来调度更新，避免频繁刷新
+        this.updateScheduler.scheduleUpdate(
+            EditorLinkView.VIEW_ID,
+            () => {
+                this.safeOperation(
+                    () => this.extensionManager.refreshAll(),
+                    'EditorLinkView',
+                    '刷新编辑器扩展失败',
+                    ErrorCategory.VIEW,
+                    ErrorLevel.WARNING,
+                    { action: 'refreshExtensions' }
+                );
+            },
+            300 // 300ms的防抖延迟
+        );
     }
 
     /**
@@ -190,8 +213,8 @@ export class EditorLinkView {
                         
                         tryCatchWrapper(
                             () => {
-                                // 从缓存获取显示标题
-                                const displayTitle = this.getDisplayTitle(link.fileName);
+                                // 使用TitleService获取显示标题
+                                const displayTitle = self.titleService.getDisplayTitle(link.fileName);
                                 
                                 if (displayTitle && displayTitle !== link.fileName) {
                                     builder.add(
@@ -215,63 +238,6 @@ export class EditorLinkView {
                             }
                         );
                     }
-                }
-
-                getDisplayTitle(fileName: string): string {
-                    return tryCatchWrapper(
-                        () => {
-                            // 尝试查找对应的文件
-                            const file = this.findFile(fileName);
-                            if (!file) return fileName;
-                            
-                            // 使用缓存管理器获取显示标题
-                            return this.getCachedDisplayTitle(file) || fileName;
-                        },
-                        'EditorLinkView',
-                        self.errorManager,
-                        self.logger,
-                        {
-                            errorMessage: '获取显示标题失败',
-                            category: ErrorCategory.DATA,
-                            level: ErrorLevel.WARNING,
-                            details: { location: 'getDisplayTitle', fileName }
-                        }
-                    ) || fileName;
-                }
-
-                findFile(fileName: string): TFile | null {
-                    return tryCatchWrapper(
-                        () => {
-                            const files = self.plugin.app.vault.getMarkdownFiles();
-                            return files.find(file => file.basename === fileName || file.path === fileName) || null;
-                        },
-                        'EditorLinkView',
-                        self.errorManager,
-                        self.logger,
-                        {
-                            errorMessage: '查找文件失败',
-                            category: ErrorCategory.FILE,
-                            level: ErrorLevel.WARNING,
-                            details: { location: 'findFile', fileName }
-                        }
-                    );
-                }
-
-                getCachedDisplayTitle(file: TFile): string | null {
-                    return tryCatchWrapper(
-                        () => {
-                            return self.cacheManager.processFile(file);
-                        },
-                        'EditorLinkView',
-                        self.errorManager,
-                        self.logger,
-                        {
-                            errorMessage: '获取缓存标题失败',
-                            category: ErrorCategory.CACHE,
-                            level: ErrorLevel.WARNING,
-                            details: { location: 'getCachedDisplayTitle', filePath: file.path }
-                        }
-                    );
                 }
             },
             {

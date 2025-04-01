@@ -9,8 +9,7 @@ import { ErrorCategory } from '../utils/errors';
 import { 
     tryCatchWrapper, 
     logErrorsWithoutThrowing, 
-    measurePerformance,
-    handleEditorOperation 
+    measurePerformance
 } from '../utils/error-helpers';
 import { 
     querySelector, 
@@ -18,24 +17,38 @@ import {
     getAttribute, 
     setAttribute 
 } from '../utils/dom-helpers';
+import { AbstractView } from './base/abstract-view';
+import { TitleService } from '../services/title.service';
+import { FileService } from '../services/file.service';
+import { UpdateScheduler } from '../services/update-scheduler.service';
 
 /**
  * 阅读视图组件，负责处理预览模式中的标题显示
  */
 @injectable()
-export class ReadingView {
+export class ReadingView extends AbstractView {
+    private static readonly VIEW_ID = 'reading-view';
+    private updateTimer: number | null = null;
+
     constructor(
-        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
+        @inject(TYPES.Logger) logger: Logger,
+        @inject(TYPES.ErrorManager) errorManager: ErrorManagerService,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
-        @inject(TYPES.Logger) private logger: Logger,
-        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
-    ) {}
+        @inject(TYPES.TitleService) private titleService: TitleService,
+        @inject(TYPES.FileService) private fileService: FileService,
+        @inject(TYPES.UpdateScheduler) private updateScheduler: UpdateScheduler
+    ) {
+        super(plugin, logger, errorManager);
+    }
 
     /**
      * 初始化阅读视图
      */
     initialize(): void {
-        tryCatchWrapper(
+        this.logInfo(`[${ReadingView.VIEW_ID}] 正在初始化...`);
+        
+        this.safeOperation(
             () => {
                 // 注册文件打开事件监听器
                 this.plugin.registerEvent(
@@ -54,18 +67,24 @@ export class ReadingView {
                 // 注册预览模式渲染完成事件
                 this.plugin.registerEvent(
                     this.plugin.app.workspace.on('layout-change', () => {
-                        setTimeout(() => this.updateView(), 100);
+                        // 使用更新调度器延迟处理，确保DOM已完全渲染
+                        this.updateScheduler.scheduleUpdate(
+                            `${ReadingView.VIEW_ID}-layout`,
+                            () => this.updateView(),
+                            100
+                        );
                     })
                 );
                 
                 // 注册文件修改事件
                 this.plugin.registerEvent(
                     this.plugin.app.vault.on('modify', (file) => {
-                        logErrorsWithoutThrowing(
+                        this.safeOperation(
                             () => {
                                 if (file instanceof TFile && file.extension === 'md') {
                                     // 更新缓存
                                     this.cacheManager.invalidateFile(file);
+                                    
                                     // 更新当前打开的文件的视图
                                     const activeFile = this.plugin.app.workspace.getActiveFile();
                                     if (activeFile && activeFile.path === file.path) {
@@ -74,14 +93,10 @@ export class ReadingView {
                                 }
                             },
                             'ReadingView',
-                            this.errorManager,
-                            this.logger,
-                            {
-                                errorMessage: '处理文件修改事件失败',
-                                category: ErrorCategory.FILE,
-                                level: ErrorLevel.WARNING,
-                                details: { filePath: file instanceof TFile ? file.path : 'unknown' }
-                            }
+                            '处理文件修改事件失败',
+                            ErrorCategory.FILE,
+                            ErrorLevel.WARNING,
+                            { filePath: file instanceof TFile ? file.path : 'unknown' }
                         );
                     })
                 );
@@ -90,64 +105,61 @@ export class ReadingView {
                 this.updateView();
             },
             'ReadingView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '初始化阅读视图失败',
-                category: ErrorCategory.LIFECYCLE,
-                level: ErrorLevel.ERROR,
-                userVisible: true,
-                details: { action: 'initialize' }
-            }
+            '初始化阅读视图失败',
+            ErrorCategory.LIFECYCLE,
+            ErrorLevel.ERROR,
+            { action: 'initialize' }
         );
+        
+        this.logInfo(`[${ReadingView.VIEW_ID}] 初始化完成`);
     }
 
     /**
      * 卸载阅读视图
      */
     unload(): void {
-        tryCatchWrapper(
-            () => {
-                // 可以在这里进行清理工作
-                this.logger.debug('阅读视图已卸载');
-            },
-            'ReadingView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '卸载阅读视图失败',
-                category: ErrorCategory.LIFECYCLE,
-                level: ErrorLevel.WARNING,
-                userVisible: false,
-                details: { action: 'unload' }
-            }
-        );
+        this.logInfo(`[${ReadingView.VIEW_ID}] 正在卸载...`);
+        
+        // 取消所有调度的更新
+        this.updateScheduler.cancelScheduledUpdate(`${ReadingView.VIEW_ID}-layout`);
+        this.updateScheduler.cancelScheduledUpdate(ReadingView.VIEW_ID);
+        
+        this.logInfo(`[${ReadingView.VIEW_ID}] 卸载完成`);
     }
 
     /**
      * 更新阅读视图中的链接标题
      */
     updateView(): void {
-        measurePerformance(
+        this.logDebug(`[${ReadingView.VIEW_ID}] 正在更新视图...`);
+        
+        // 使用更新调度器进行防抖处理
+        this.updateScheduler.scheduleUpdate(
+            ReadingView.VIEW_ID,
             () => {
-                // 获取当前活动叶子
-                const activeLeaf = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-                if (!activeLeaf) return;
-                
-                // 检查是否处于阅读模式
-                if (activeLeaf.getMode() !== 'preview') return;
+                measurePerformance(
+                    () => {
+                        // 获取当前活动叶子
+                        const activeLeaf = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                        if (!activeLeaf) return;
+                        
+                        // 检查是否处于阅读模式
+                        if (activeLeaf.getMode() !== 'preview') return;
 
-                // 获取预览模式下的DOM元素
-                const previewEl = activeLeaf.previewMode.containerEl;
-                if (!previewEl) return;
+                        // 获取预览模式下的DOM元素
+                        const previewEl = activeLeaf.previewMode.containerEl;
+                        if (!previewEl) return;
 
-                // 处理预览模式中的所有链接
-                this.processPreviewLinks(previewEl);
+                        // 处理预览模式中的所有链接
+                        this.processPreviewLinks(previewEl);
+                    },
+                    'ReadingView',
+                    100, // 性能阈值(ms)
+                    this.errorManager,
+                    this.logger
+                );
             },
-            'ReadingView',
-            100, // 性能阈值(ms)
-            this.errorManager,
-            this.logger
+            250 // 250ms防抖延迟
         );
     }
 
@@ -155,7 +167,7 @@ export class ReadingView {
      * 处理预览模式中的所有链接
      */
     private processPreviewLinks(containerEl: HTMLElement): void {
-        tryCatchWrapper(
+        this.safeOperation(
             () => {
                 // 使用DOM助手函数查找所有内部链接
                 const internalLinks = querySelectorAll(
@@ -202,8 +214,8 @@ export class ReadingView {
                             
                             if (isProcessed) return;
                             
-                            // 从缓存获取显示标题
-                            const displayTitle = this.getDisplayTitle(originalFileName);
+                            // 使用TitleService获取显示标题
+                            const displayTitle = this.titleService.getDisplayTitle(originalFileName);
                             
                             if (displayTitle && displayTitle !== originalFileName) {
                                 // 更新链接显示文本
@@ -246,76 +258,9 @@ export class ReadingView {
                 return true;
             },
             'ReadingView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '处理阅读视图链接时发生错误',
-                category: ErrorCategory.UI,
-                level: ErrorLevel.ERROR,
-                userVisible: false
-            }
-        );
-    }
-
-    /**
-     * 从缓存获取显示标题
-     */
-    private getDisplayTitle(fileName: string): string | null {
-        return tryCatchWrapper(
-            () => {
-                // 移除文件扩展名
-                const baseName = fileName.replace(/\.[^.]+$/, '');
-                
-                // 尝试从缓存获取标题
-                let displayTitle = this.cacheManager.getDisplayTitle(baseName);
-                
-                // 如果缓存中没有找到，尝试处理文件
-                if (!displayTitle) {
-                    // 查找匹配的文件
-                    const file = this.findFile(baseName);
-                    if (file) {
-                        displayTitle = this.cacheManager.processFile(file);
-                    }
-                }
-                
-                return displayTitle;
-            },
-            'ReadingView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '获取显示标题时发生错误',
-                category: ErrorCategory.FILE,
-                level: ErrorLevel.WARNING,
-                details: { fileName },
-                userVisible: false
-            }
-        );
-    }
-    
-    /**
-     * 查找匹配的文件
-     */
-    private findFile(fileName: string): TFile | null {
-        return tryCatchWrapper(
-            () => {
-                const files = this.plugin.app.vault.getMarkdownFiles();
-                return files.find(file => 
-                    file.basename === fileName || 
-                    file.path === fileName || 
-                    file.path === `${fileName}.md`
-                ) || null;
-            },
-            'ReadingView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '查找文件时发生错误',
-                category: ErrorCategory.FILE,
-                level: ErrorLevel.WARNING,
-                details: { fileName },
-                userVisible: false
-            }
+            '处理阅读视图链接时发生错误',
+            ErrorCategory.UI,
+            ErrorLevel.ERROR
         );
     }
 } 

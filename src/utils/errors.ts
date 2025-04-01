@@ -8,6 +8,7 @@ export enum ErrorCategory {
   FILE = 'FILE',       // 文件操作错误
   REGEX = 'REGEX',      // 正则表达式错误
   UI = 'UI',         // UI交互错误
+  VIEW = 'VIEW',      // 视图相关错误
   NETWORK = 'NETWORK',    // 网络相关错误
   PARSER = 'PARSER',    // 解析错误
   DATA = 'DATA',      // 数据处理错误
@@ -94,6 +95,19 @@ export class UIError extends TitleChangerError {
       category: ErrorCategory.UI
     });
     this.name = 'UIError';
+  }
+}
+
+/**
+ * 视图错误
+ */
+export class ViewError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.VIEW
+    });
+    this.name = 'ViewError';
   }
 }
 

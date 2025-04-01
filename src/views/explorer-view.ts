@@ -11,10 +11,8 @@ import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
 import { ErrorCategory } from '../utils/errors';
 import { 
-    handleEditorOperation, 
-    tryCatchWrapper,
-    logErrorsWithoutThrowing,
-    measurePerformance
+    measurePerformance,
+    logErrorsWithoutThrowing
 } from '../utils/error-helpers';
 import {
     createDiv,
@@ -23,32 +21,38 @@ import {
     querySelector,
     querySelectorAll
 } from '../utils/dom-helpers';
+import { AbstractView } from './base/abstract-view';
+import { UpdateScheduler } from '../services/update-scheduler.service';
 
 /**
  * 文件浏览器视图，作为各服务的协调器
  */
 @injectable()
-export class ExplorerView {
-    // 更新计时器
-    private updateTimer: number | null = null;
-    private static readonly UPDATE_INTERVAL = 500;
+export class ExplorerView extends AbstractView {
+    private static readonly VIEW_ID = 'explorer-view';
+    private virtualScrollIntervalId: number | null = null;
 
     constructor(
-        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
+        @inject(TYPES.Logger) logger: Logger,
+        @inject(TYPES.ErrorManager) errorManager: ErrorManagerService,
         @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService,
         @inject(TYPES.ExplorerEventsService) private eventsService: ExplorerEventsService,
         @inject(TYPES.FileHandlerService) private fileHandler: FileHandlerService,
         @inject(TYPES.ExplorerStateService) private stateService: ExplorerStateService,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
-        @inject(TYPES.Logger) private logger: Logger,
-        @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
-    ) {}
+        @inject(TYPES.UpdateScheduler) private updateScheduler: UpdateScheduler
+    ) {
+        super(plugin, logger, errorManager);
+    }
 
     /**
      * 初始化视图
      */
     initialize(): void {
-        tryCatchWrapper(
+        this.logInfo(`[${ExplorerView.VIEW_ID}] 正在初始化...`);
+        
+        this.safeOperation(
             () => {
                 // 设置立即更新函数
                 this.eventsService.setImmediateUpdateFn(() => this.immediateUpdate());
@@ -63,23 +67,20 @@ export class ExplorerView {
                 this.setupVirtualScrollMonitor();
             },
             'ExplorerView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '初始化文件浏览器视图失败',
-                category: ErrorCategory.LIFECYCLE,
-                level: ErrorLevel.ERROR,
-                userVisible: true,
-                details: { action: 'initialize' }
-            }
+            '初始化文件浏览器视图失败',
+            ErrorCategory.LIFECYCLE,
+            ErrorLevel.ERROR,
+            { action: 'initialize' }
         );
+        
+        this.logInfo(`[${ExplorerView.VIEW_ID}] 初始化完成`);
     }
 
     /**
      * 注册所有事件监听器
      */
     private registerEvents(): void {
-        logErrorsWithoutThrowing(
+        this.safeOperation(
             () => {
                 // 注册DOM观察器
                 this.eventsService.registerDOMObserver(() => this.scheduleUpdate());
@@ -94,14 +95,10 @@ export class ExplorerView {
                 this.eventsService.registerLayoutEvents(() => this.scheduleUpdate());
             },
             'ExplorerView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '注册事件处理器失败',
-                category: ErrorCategory.LIFECYCLE,
-                level: ErrorLevel.WARNING,
-                details: { action: 'registerEvents' }
-            }
+            '注册事件处理器失败',
+            ErrorCategory.LIFECYCLE,
+            ErrorLevel.WARNING,
+            { action: 'registerEvents' }
         );
     }
 
@@ -109,52 +106,36 @@ export class ExplorerView {
      * 安排初始更新
      */
     private scheduleInitialUpdate(): void {
-        window.setTimeout(() => {
-            tryCatchWrapper(
-                () => {
-                    const fileExplorers = this.domSelector.getFileExplorers();
-                    if (fileExplorers.length > 0) {
-                        this.updateView();
-                    }
-                },
-                'ExplorerView',
-                this.errorManager,
-                this.logger,
-                {
-                    errorMessage: '执行初始更新失败',
-                    category: ErrorCategory.UI,
-                    level: ErrorLevel.WARNING,
-                    details: { action: 'scheduleInitialUpdate' }
-                }
-            );
-        }, 500);
+        this.updateScheduler.scheduleUpdate(
+            `${ExplorerView.VIEW_ID}-initial`,
+            () => {
+                this.safeOperation(
+                    () => {
+                        const fileExplorers = this.domSelector.getFileExplorers();
+                        if (fileExplorers.length > 0) {
+                            this.updateView();
+                        }
+                    },
+                    'ExplorerView',
+                    '执行初始更新失败',
+                    ErrorCategory.UI,
+                    ErrorLevel.WARNING,
+                    { action: 'scheduleInitialUpdate' }
+                );
+            },
+            500 // 500ms延迟
+        );
     }
 
     /**
      * 安排更新（防抖）
      */
     private scheduleUpdate(): void {
-        if (this.updateTimer !== null) {
-            window.clearTimeout(this.updateTimer);
-        }
-        
-        this.updateTimer = window.setTimeout(() => {
-            tryCatchWrapper(
-                () => {
-                    this.updateView();
-                    this.updateTimer = null;
-                },
-                'ExplorerView',
-                this.errorManager,
-                this.logger,
-                {
-                    errorMessage: '执行定时更新失败',
-                    category: ErrorCategory.UI,
-                    level: ErrorLevel.WARNING,
-                    details: { action: 'scheduleUpdate' }
-                }
-            );
-        }, ExplorerView.UPDATE_INTERVAL);
+        this.updateScheduler.scheduleUpdate(
+            ExplorerView.VIEW_ID,
+            () => this.updateView(),
+            500 // 使用与原先相同的500ms延迟
+        );
     }
 
     /**
@@ -162,42 +143,28 @@ export class ExplorerView {
      * 适用于文件重命名等需要立即响应的场景
      */
     immediateUpdate(): void {
-        tryCatchWrapper(
+        this.logDebug(`[${ExplorerView.VIEW_ID}] 执行立即更新`);
+        
+        this.safeOperation(
             () => {
-                // 清除任何现有的更新计时器
-                if (this.updateTimer !== null) {
-                    window.clearTimeout(this.updateTimer);
-                    this.updateTimer = null;
-                }
+                // 取消任何现有的更新计时器
+                this.updateScheduler.cancelScheduledUpdate(ExplorerView.VIEW_ID);
                 
                 // 立即更新视图
                 this.updateView();
                 
                 // 延迟再次更新以确保所有视图元素都被正确更新
-                setTimeout(() => {
-                    tryCatchWrapper(
-                        () => this.updateView(),
-                        'ExplorerView',
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '执行延迟立即更新失败',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.WARNING,
-                            details: { action: 'immediateUpdate:delayed' }
-                        }
-                    );
-                }, 150);
+                this.updateScheduler.scheduleUpdate(
+                    `${ExplorerView.VIEW_ID}-delayed`,
+                    () => this.updateView(),
+                    150
+                );
             },
             'ExplorerView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '执行立即更新失败',
-                category: ErrorCategory.UI,
-                level: ErrorLevel.WARNING,
-                details: { action: 'immediateUpdate' }
-            }
+            '执行立即更新失败',
+            ErrorCategory.UI,
+            ErrorLevel.WARNING,
+            { action: 'immediateUpdate' }
         );
     }
 
@@ -205,13 +172,15 @@ export class ExplorerView {
      * 更新视图
      */
     updateView(): void {
+        this.logDebug(`[${ExplorerView.VIEW_ID}] 正在更新视图...`);
+        
         // 使用性能监控工具测量更新过程
         measurePerformance(
             () => {
                 const fileExplorers = this.domSelector.getFileExplorers();
                 
                 fileExplorers.forEach(explorer => {
-                    tryCatchWrapper(
+                    this.safeOperation(
                         () => {
                             const fileItems = this.domSelector.getFileItems(explorer);
                             
@@ -233,14 +202,10 @@ export class ExplorerView {
                             }
                         },
                         'ExplorerView',
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理文件浏览器元素失败',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.WARNING,
-                            details: { action: 'updateView:processExplorer' }
-                        }
+                        '处理文件浏览器元素失败',
+                        ErrorCategory.UI,
+                        ErrorLevel.WARNING,
+                        { action: 'updateView:processExplorer' }
                     );
                 });
             },
@@ -296,20 +261,18 @@ export class ExplorerView {
         this.virtualScrollIntervalId = intervalId;
     }
 
-    // 添加新的成员变量
-    private virtualScrollIntervalId: number | null = null;
-
     /**
      * 卸载视图
      */
     unload(): void {
-        tryCatchWrapper(
+        this.logInfo(`[${ExplorerView.VIEW_ID}] 正在卸载...`);
+        
+        this.safeOperation(
             () => {
-                // 取消更新计时器
-                if (this.updateTimer !== null) {
-                    window.clearTimeout(this.updateTimer);
-                    this.updateTimer = null;
-                }
+                // 取消所有调度的更新
+                this.updateScheduler.cancelScheduledUpdate(ExplorerView.VIEW_ID);
+                this.updateScheduler.cancelScheduledUpdate(`${ExplorerView.VIEW_ID}-initial`);
+                this.updateScheduler.cancelScheduledUpdate(`${ExplorerView.VIEW_ID}-delayed`);
                 
                 // 清除虚拟滚动监视器
                 if (this.virtualScrollIntervalId !== null) {
@@ -324,15 +287,12 @@ export class ExplorerView {
                 this.stateService.restoreAllOriginalFilenames(() => this.domSelector.getTextElements(document.body));
             },
             'ExplorerView',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '卸载文件浏览器视图失败',
-                category: ErrorCategory.LIFECYCLE,
-                level: ErrorLevel.WARNING,
-                userVisible: false,
-                details: { action: 'unload' }
-            }
+            '卸载文件浏览器视图失败',
+            ErrorCategory.LIFECYCLE,
+            ErrorLevel.WARNING,
+            { action: 'unload' }
         );
+        
+        this.logInfo(`[${ExplorerView.VIEW_ID}] 卸载完成`);
     }
 } 
