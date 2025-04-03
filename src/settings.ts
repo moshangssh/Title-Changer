@@ -13,13 +13,43 @@ export interface TitleChangerSettings {
 
     // 是否启用递归子文件夹
     includeSubfolders: boolean;
+
+    /**
+     * 是否启用调试模式
+     */
+    debugMode: boolean;
+
+    /**
+     * 是否在文件浏览器中显示自定义标题
+     */
+    showInFileExplorer: boolean;
+
+    /**
+     * 是否在编辑器中显示自定义标题
+     */
+    showInEditor: boolean;
+
+    /**
+     * 是否使用缓存
+     */
+    useCache: boolean;
+
+    /**
+     * 缓存过期时间（分钟）
+     */
+    cacheExpiration: number;
 }
 
 export const DEFAULT_SETTINGS: TitleChangerSettings = {
     regexPattern: '.*_\\d{4}_\\d{2}_\\d{2}_(.+)$', // 匹配日期格式后的所有内容
     folderRestrictionEnabled: false,
     includedFolders: [],
-    includeSubfolders: true
+    includeSubfolders: true,
+    debugMode: false,
+    showInFileExplorer: true,
+    showInEditor: true,
+    useCache: true,
+    cacheExpiration: 60
 };
 
 export class TitleChangerSettingTab extends PluginSettingTab {
@@ -38,6 +68,25 @@ export class TitleChangerSettingTab extends PluginSettingTab {
 
         containerEl.createEl('h2', { text: 'Title Changer 设置' });
 
+        // 提取标题设置
+        this.createTitleSettings(containerEl);
+
+        // 文件夹限制设置
+        this.createFolderSettings(containerEl);
+
+        // 显示设置
+        this.createDisplaySettings(containerEl);
+
+        // 缓存设置
+        this.createCacheSettings(containerEl);
+
+        // 调试设置
+        this.createDebugSettings(containerEl);
+    }
+
+    private createTitleSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '标题设置' });
+
         new Setting(containerEl)
             .setName('正则表达式')
             .setDesc('用于从文件名中提取显示名称的正则表达式。使用括号()来捕获要显示的部分。默认模式匹配日期格式(YYYY_MM_DD)后的所有内容。')
@@ -48,6 +97,10 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                     this.plugin.settings.regexPattern = value;
                     await this.plugin.saveSettings();
                 }));
+    }
+
+    private createFolderSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '文件夹设置' });
 
         new Setting(containerEl)
             .setName('启用文件夹限制')
@@ -81,5 +134,71 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }));
         }
+    }
+
+    private createDisplaySettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '显示设置' });
+
+        new Setting(containerEl)
+            .setName('文件浏览器中显示')
+            .setDesc('在文件浏览器中显示自定义标题')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showInFileExplorer)
+                .onChange(async (value) => {
+                    this.plugin.settings.showInFileExplorer = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('编辑器中显示')
+            .setDesc('在编辑器中显示自定义标题')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showInEditor)
+                .onChange(async (value) => {
+                    this.plugin.settings.showInEditor = value;
+                    await this.plugin.saveSettings();
+                }));
+    }
+
+    private createCacheSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '缓存设置' });
+
+        new Setting(containerEl)
+            .setName('启用缓存')
+            .setDesc('使用缓存以提高性能')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.useCache)
+                .onChange(async (value) => {
+                    this.plugin.settings.useCache = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        if (this.plugin.settings.useCache) {
+            new Setting(containerEl)
+                .setName('缓存过期时间')
+                .setDesc('缓存过期时间（分钟）')
+                .addSlider(slider => slider
+                    .setLimits(5, 1440, 5)
+                    .setValue(this.plugin.settings.cacheExpiration)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        this.plugin.settings.cacheExpiration = value;
+                        await this.plugin.saveSettings();
+                    }));
+        }
+    }
+
+    private createDebugSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '调试设置' });
+
+        new Setting(containerEl)
+            .setName('调试模式')
+            .setDesc('启用调试模式以获取更多日志信息')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debugMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.debugMode = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 } 

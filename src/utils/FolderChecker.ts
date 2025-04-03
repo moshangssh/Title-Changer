@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { TitleChangerSettings } from '../settings';
+import { TitleChangerSettings } from '../Settings';
 
 // BUG: 包含的文件夹功能不支持递归子文件夹
 // Affects: folder-checker.ts
