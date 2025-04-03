@@ -20,16 +20,6 @@ export interface TitleChangerSettings {
     debugMode: boolean;
 
     /**
-     * 是否在文件浏览器中显示自定义标题
-     */
-    showInFileExplorer: boolean;
-
-    /**
-     * 是否在编辑器中显示自定义标题
-     */
-    showInEditor: boolean;
-
-    /**
      * 是否使用缓存
      */
     useCache: boolean;
@@ -46,8 +36,6 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     includedFolders: [],
     includeSubfolders: true,
     debugMode: false,
-    showInFileExplorer: true,
-    showInEditor: true,
     useCache: true,
     cacheExpiration: 60
 };
@@ -73,9 +61,6 @@ export class TitleChangerSettingTab extends PluginSettingTab {
 
         // 文件夹限制设置
         this.createFolderSettings(containerEl);
-
-        // 显示设置
-        this.createDisplaySettings(containerEl);
 
         // 缓存设置
         this.createCacheSettings(containerEl);
@@ -134,30 +119,6 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }));
         }
-    }
-
-    private createDisplaySettings(containerEl: HTMLElement): void {
-        containerEl.createEl('h3', { text: '显示设置' });
-
-        new Setting(containerEl)
-            .setName('文件浏览器中显示')
-            .setDesc('在文件浏览器中显示自定义标题')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.showInFileExplorer)
-                .onChange(async (value) => {
-                    this.plugin.settings.showInFileExplorer = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('编辑器中显示')
-            .setDesc('在编辑器中显示自定义标题')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.showInEditor)
-                .onChange(async (value) => {
-                    this.plugin.settings.showInEditor = value;
-                    await this.plugin.saveSettings();
-                }));
     }
 
     private createCacheSettings(containerEl: HTMLElement): void {
