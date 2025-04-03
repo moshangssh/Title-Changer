@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import { TitleChangerSettings } from '../Settings';
+import { TitleChangerSettings } from '../settings';
 import { TYPES } from '../types/Symbols';
 import { CacheManager } from '../CacheManager';
 import { TFile } from 'obsidian';

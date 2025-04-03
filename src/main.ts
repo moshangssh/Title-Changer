@@ -1,6 +1,6 @@
 import { App, Plugin, Vault } from 'obsidian';
 import { Container } from 'inversify';
-import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './Settings';
+import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './settings';
 import { ViewManager } from './views/ViewManager';
 import { CacheManager } from './CacheManager';
 import { TYPES } from './types/Symbols';

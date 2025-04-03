@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { TYPES } from "./types/Symbols";
 import { App, Vault } from "obsidian";
 import { TitleChangerPlugin } from "./main";
-import { TitleChangerSettings } from "./Settings";
+import { TitleChangerSettings } from "./settings";
 import { CacheManager } from "./CacheManager";
 import { ViewManager } from "./views/ViewManager";
 import { FileHandlerService } from "./services/FileHandlerService";

@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import { TitleChangerSettings } from '../Settings';
+import { TitleChangerSettings } from '../settings';
 import { ErrorCategory, RegexError } from './Errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
 import { Logger } from './Logger';

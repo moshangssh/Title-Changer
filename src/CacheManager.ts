@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from './types/Symbols';
-import type { TitleChangerSettings } from './Settings';
+import type { TitleChangerSettings } from './settings';
 import { FolderChecker } from './utils/FolderChecker';
 import { TitleProcessor } from './utils/TitleProcessor';
 import type { ICacheManager } from './types/ObsidianExtensions';
