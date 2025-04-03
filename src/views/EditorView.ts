@@ -2,25 +2,25 @@ import { MarkdownView, TFile, Workspace } from 'obsidian';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
 import { RangeSetBuilder, Annotation } from '@codemirror/state';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import { CacheManager } from '../cache-manager';
+import { TYPES } from '../types/Symbols';
+import { CacheManager } from '../CacheManager';
 import type { TitleChangerPlugin } from '../main';
-import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager } from '../types/obsidian-extensions';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
-import { ErrorCategory } from '../utils/errors';
+import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager } from '../types/ObsidianExtensions';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
 import { 
     handleEditorOperation, 
     tryCatchWithValidation,
     tryCatchWrapper
-} from '../utils/error-helpers';
+} from '../utils/ErrorHelpers';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
-import { extractWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
-import { getAttribute } from '../utils/dom-helpers';
+import { extractWikiLinks, shouldReplaceTitle } from '../utils/WikiLinkProcessor';
+import { getAttribute } from '../utils/DomHelpers';
 import { AbstractView } from './base/abstract-view';
-import { TitleService } from '../services/title.service';
+import { TitleService } from '../services/TitleService';
 import { FileService } from '../services/file.service';
-import { UpdateScheduler } from '../services/update-scheduler.service';
+import { UpdateScheduler } from '../services/UpdateSchedulerService';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示

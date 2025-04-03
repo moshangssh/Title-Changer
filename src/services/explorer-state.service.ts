@@ -1,9 +1,9 @@
 import { injectable, inject } from 'inversify';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory, DataError } from '../utils/errors';
-import { tryCatchWrapper, logErrorsWithoutThrowing, validateData } from '../utils/error-helpers';
-import { Logger } from '../utils/logger';
-import { TYPES } from '../types/symbols';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory, DataError } from '../utils/Errors';
+import { tryCatchWrapper, logErrorsWithoutThrowing, validateData } from '../utils/ErrorHelpers';
+import { Logger } from '../utils/Logger';
+import { TYPES } from '../types/Symbols';
 
 /**
  * 用于存储原始文本的WeakMap键值对

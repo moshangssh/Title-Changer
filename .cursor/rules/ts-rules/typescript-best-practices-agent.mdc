@@ -20,6 +20,7 @@ alwaysApply: false
 - Keep generics simple and well-constrained
 - Use Pick, Omit, Partial and other utility types when appropriate
 - Document complex types and ALL public functions classes and interfaces with JSDoc comments
+- Use PascalCase for interfaces, classes, type aliases and enums
 
 ## Examples
 

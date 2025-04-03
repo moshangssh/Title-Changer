@@ -1,14 +1,14 @@
 import { TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from './types/symbols';
-import type { TitleChangerSettings } from './settings';
-import { FolderChecker } from './utils/folder-checker';
-import { TitleProcessor } from './utils/title-processor';
-import type { ICacheManager } from './types/obsidian-extensions';
-import { Logger } from './utils/logger';
-import { ErrorManagerService } from './services/error-manager.service';
-import { ErrorCategory } from './utils/errors';
-import { tryCatchWrapper } from './utils/error-helpers';
+import { TYPES } from './types/Symbols';
+import type { TitleChangerSettings } from './Settings';
+import { FolderChecker } from './utils/FolderChecker';
+import { TitleProcessor } from './utils/TitleProcessor';
+import type { ICacheManager } from './types/ObsidianExtensions';
+import { Logger } from './utils/Logger';
+import { ErrorManagerService } from './services/ErrorManagerService';
+import { ErrorCategory } from './utils/Errors';
+import { tryCatchWrapper } from './utils/ErrorHelpers';
 
 /**
  * 缓存管理器，用于存储和管理文件名处理结果的缓存

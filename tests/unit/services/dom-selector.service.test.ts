@@ -1,5 +1,5 @@
 import { Container } from 'inversify';
-import { DOMSelectorService } from '../../../src/services/dom-selector.service';
+import { DOMSelectorService } from '../../../src/services/DomSelectorService';
 import { TYPES } from '../../../src/types/symbols';
 
 describe('DOMSelectorService', () => {

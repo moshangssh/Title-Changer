@@ -4,23 +4,23 @@ import { TYPES } from "./types/symbols";
 import { App, Vault } from "obsidian";
 import { TitleChangerPlugin } from "./main";
 import { TitleChangerSettings } from "./settings";
-import { CacheManager } from "./cache-manager";
-import { ViewManager } from "./views/view-manager";
-import { ExplorerView } from "./views/explorer-view";
-import { EditorLinkView } from "./views/editor-view";
-import { ReadingView } from "./views/reading-view";
-import { FileHandlerService } from "./services/file-handler.service";
-import { DOMSelectorService } from "./services/dom-selector.service";
+import { CacheManager } from "./CacheManager";
+import { ViewManager } from "./views/ViewManager";
+import { ExplorerView } from "./views/ExplorerView";
+import { EditorLinkView } from "./views/EditorView";
+import { ReadingView } from "./views/ReadingView";
+import { FileHandlerService } from "./services/FileHandlerService";
+import { DOMSelectorService } from "./services/DomSelectorService";
 import { ExplorerStateService } from "./services/explorer-state.service";
-import { ExplorerEventsService } from "./services/explorer-events.service";
-import { Logger } from "./utils/logger";
+import { ExplorerEventsService } from "./services/ExplorerEventsService";
+import { Logger } from "./utils/Logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
-import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/obsidian-extensions";
+import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/ObsidianExtensions";
 import { LinkTransformerService } from "./services/link-transformer.service";
-import { ErrorManagerService } from "./services/error-manager.service";
+import { ErrorManagerService } from "./services/ErrorManagerService";
 import { FileService } from "./services/file.service";
-import { TitleService } from "./services/title.service";
-import { UpdateScheduler } from "./services/update-scheduler.service";
+import { TitleService } from "./services/TitleService";
+import { UpdateScheduler } from "./services/UpdateSchedulerService";
 
 /**
  * 创建并配置 InversifyJS 容器

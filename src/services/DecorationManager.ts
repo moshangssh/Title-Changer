@@ -1,14 +1,14 @@
 import { EditorView, Decoration, DecorationSet, ViewUpdate, ViewPlugin } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
-import type { ICacheManager } from '../types/obsidian-extensions';
+import type { ICacheManager } from '../types/ObsidianExtensions';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
+import { TYPES } from '../types/Symbols';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
-import { extractSimpleWikiLinks, shouldReplaceTitle } from '../utils/wiki-link-processor';
-import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/error-helpers';
-import { ErrorCategory, DecorationError } from '../utils/errors';
-import { Logger } from '../utils/logger';
+import { extractSimpleWikiLinks, shouldReplaceTitle } from '../utils/WikiLinkProcessor';
+import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
+import { ErrorCategory, DecorationError } from '../utils/Errors';
+import { Logger } from '../utils/Logger';
 
 @injectable()
 export class DecorationManager {

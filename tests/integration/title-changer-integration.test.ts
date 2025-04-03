@@ -1,7 +1,7 @@
 import { mock } from 'jest-mock-extended';
 import { App, TFile, Vault, Workspace } from 'obsidian';
 import { LinkTitleWidget } from '../../src/components/widgets/LinkTitleWidget';
-import { extractWikiLinks, WikiLink } from '../../src/utils/wiki-link-processor';
+import { extractWikiLinks, WikiLink } from '../../src/utils/WikiLinkProcessor';
 
 // 模拟Obsidian的应用程序环境
 const createMockApp = () => {

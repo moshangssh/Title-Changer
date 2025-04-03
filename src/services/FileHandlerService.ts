@@ -1,13 +1,13 @@
 import { TFile, Vault } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import { CacheManager } from '../cache-manager';
+import { TYPES } from '../types/Symbols';
+import { CacheManager } from '../CacheManager';
 import { ExplorerStateService } from './explorer-state.service';
-import { DOMSelectorService } from './dom-selector.service';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/error-helpers';
+import { DOMSelectorService } from './DomSelectorService';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
+import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/ErrorHelpers';
 
 /**
  * 文件处理服务，负责处理文件相关操作

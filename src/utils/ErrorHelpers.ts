@@ -1,6 +1,6 @@
-import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './errors';
-import { ErrorLevel, ErrorManagerService } from '../services/error-manager.service';
-import { Logger } from './logger';
+import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './Errors';
+import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
+import { Logger } from './Logger';
 
 /**
  * 同步操作的错误处理包装器

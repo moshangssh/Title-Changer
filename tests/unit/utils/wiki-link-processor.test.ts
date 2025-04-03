@@ -3,7 +3,7 @@ import {
     extractSimpleWikiLinks, 
     shouldReplaceTitle,
     WikiLink
-} from '../../../src/utils/wiki-link-processor';
+} from '../../../src/utils/WikiLinkProcessor';
 
 describe('Wiki Link Processor', () => {
     describe('extractWikiLinks', () => {

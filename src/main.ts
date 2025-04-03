@@ -1,18 +1,18 @@
 import { App, Plugin, Vault } from 'obsidian';
 import { Container } from 'inversify';
-import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './settings';
-import { ViewManager } from './views/view-manager';
-import { CacheManager } from './cache-manager';
-import { TYPES } from './types/symbols';
-import { createContainer } from './inversify.config';
-import { Logger } from './utils/logger';
-import { ExplorerView } from './views/explorer-view';
-import { EditorLinkView } from './views/editor-view';
-import { FileHandlerService } from './services/file-handler.service';
-import { DOMSelectorService } from './services/dom-selector.service';
+import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './Settings';
+import { ViewManager } from './views/ViewManager';
+import { CacheManager } from './CacheManager';
+import { TYPES } from './types/Symbols';
+import { createContainer } from './InversifyConfig';
+import { Logger } from './utils/Logger';
+import { ExplorerView } from './views/ExplorerView';
+import { EditorLinkView } from './views/EditorView';
+import { FileHandlerService } from './services/FileHandlerService';
+import { DOMSelectorService } from './services/DomSelectorService';
 import { ExplorerStateService } from './services/explorer-state.service';
-import { ExplorerEventsService } from './services/explorer-events.service';
-import { LinkTransformerService } from './services/link-transformer.service';
+import { ExplorerEventsService } from './services/ExplorerEventsService';
+import { LinkTransformerService } from './services/LinkTransformerService';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;

@@ -1,16 +1,16 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
+import { TYPES } from '../types/Symbols';
 import type { TitleChangerPlugin } from '../main';
 import type { 
     IEditorExtensionManager, 
     EditorExtensionType, 
     EditorExtensionSymbol,
     ExtendedWorkspace 
-} from '../types/obsidian-extensions';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { Logger } from '../utils/logger';
-import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper, handleEditorOperation } from '../utils/error-helpers';
+} from '../types/ObsidianExtensions';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { Logger } from '../utils/Logger';
+import { ErrorCategory } from '../utils/Errors';
+import { tryCatchWrapper, handleEditorOperation } from '../utils/ErrorHelpers';
 
 /**
  * 编辑器扩展管理器

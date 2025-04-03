@@ -1,10 +1,10 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../../types/symbols';
+import { TYPES } from '../../types/Symbols';
 import type { TitleChangerPlugin } from '../../main';
-import { Logger } from '../../utils/logger';
-import { ErrorManagerService, ErrorLevel } from '../../services/error-manager.service';
-import { tryCatchWrapper } from '../../utils/error-helpers';
-import { ErrorCategory } from '../../utils/errors';
+import { Logger } from '../../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
+import { tryCatchWrapper } from '../../utils/ErrorHelpers';
+import { ErrorCategory } from '../../utils/Errors';
 
 /**
  * 视图组件的抽象基类

@@ -13,9 +13,9 @@ import {
     tryCatchWithValidation,
     handleEditorOperation,
     handleDataOperation
-} from '../../../src/utils/error-helpers';
-import { ErrorCategory, TitleChangerError } from '../../../src/utils/errors';
-import { ErrorLevel } from '../../../src/services/error-manager.service';
+} from '../../../src/utils/ErrorHelpers';
+import { ErrorCategory, TitleChangerError } from '../../../src/utils/Errors';
+import { ErrorLevel } from '../../../src/services/ErrorManagerService';
 
 // 模拟依赖
 const mockErrorManager = {

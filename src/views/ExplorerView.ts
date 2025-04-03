@@ -1,28 +1,28 @@
 import { TFile, Events } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
+import { TYPES } from '../types/Symbols';
 import type { TitleChangerPlugin } from '../main';
-import { DOMSelectorService } from '../services/dom-selector.service';
-import { ExplorerEventsService } from '../services/explorer-events.service';
-import { FileHandlerService } from '../services/file-handler.service';
+import { DOMSelectorService } from '../services/DomSelectorService';
+import { ExplorerEventsService } from '../services/ExplorerEventsService';
+import { FileHandlerService } from '../services/FileHandlerService';
 import { ExplorerStateService } from '../services/explorer-state.service';
-import { CacheManager } from '../cache-manager';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
-import { ErrorCategory } from '../utils/errors';
+import { CacheManager } from '../CacheManager';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
 import { 
     measurePerformance,
     logErrorsWithoutThrowing
-} from '../utils/error-helpers';
+} from '../utils/ErrorHelpers';
 import {
     createDiv,
     createSpan,
     toggleClass,
     querySelector,
     querySelectorAll
-} from '../utils/dom-helpers';
+} from '../utils/DomHelpers';
 import { AbstractView } from './base/abstract-view';
-import { UpdateScheduler } from '../services/update-scheduler.service';
+import { UpdateScheduler } from '../services/UpdateSchedulerService';
 
 /**
  * 文件浏览器视图，作为各服务的协调器

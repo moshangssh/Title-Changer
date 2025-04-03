@@ -1,18 +1,18 @@
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import type { TitleChangerPlugin } from '../main';
-import type { ICacheManager } from '../types/obsidian-extensions';
+import type { ICacheManager } from '../types/ObsidianExtensions';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import type { ErrorManagerService } from './error-manager.service';
-import { ErrorLevel } from './error-manager.service';
-import { ErrorCategory } from '../utils/errors';
+import { TYPES } from '../types/Symbols';
+import type { ErrorManagerService } from './ErrorManagerService';
+import { ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
 import { 
   convertToTitleChangerError, 
   tryCatchWrapper, 
   handleEditorOperation, 
   tryCatchWithValidation 
-} from '../utils/error-helpers';
-import { Logger } from '../utils/logger';
+} from '../utils/ErrorHelpers';
+import { Logger } from '../utils/Logger';
 
 @injectable()
 export class ViewportManager {

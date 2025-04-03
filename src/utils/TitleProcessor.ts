@@ -1,9 +1,9 @@
 import { TFile } from 'obsidian';
 import { TitleChangerSettings } from '../settings';
-import { ErrorCategory, RegexError } from './errors';
-import { ErrorLevel, ErrorManagerService } from '../services/error-manager.service';
-import { Logger } from './logger';
-import { safeRegexCreation, safeRegexExecution } from './error-helpers';
+import { ErrorCategory, RegexError } from './Errors';
+import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
+import { Logger } from './Logger';
+import { safeRegexCreation, safeRegexExecution } from './ErrorHelpers';
 
 export class TitleProcessor {
     /**

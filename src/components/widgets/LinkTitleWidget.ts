@@ -1,8 +1,8 @@
 import { WidgetType } from '@codemirror/view';
 import { Plugin } from 'obsidian';
-import { createSpan } from '../../utils/dom-helpers';
-import { ErrorManagerService } from '../../services/error-manager.service';
-import { Logger } from '../../utils/logger';
+import { createSpan } from '../../utils/DomHelpers';
+import { ErrorManagerService } from '../../services/ErrorManagerService';
+import { Logger } from '../../utils/Logger';
 
 /**
  * 插件类型声明

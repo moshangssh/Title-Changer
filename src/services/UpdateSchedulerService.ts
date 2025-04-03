@@ -1,9 +1,9 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper } from '../utils/error-helpers';
+import { TYPES } from '../types/Symbols';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
+import { tryCatchWrapper } from '../utils/ErrorHelpers';
 
 /**
  * 更新调度器 - 处理视图更新的调度和防抖

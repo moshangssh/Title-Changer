@@ -1,7 +1,7 @@
-import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
-import { ErrorCategory } from './errors';
-import { Logger } from './logger';
-import { tryCatchWrapper, logErrorsWithoutThrowing } from './error-helpers';
+import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
+import { ErrorCategory } from './Errors';
+import { Logger } from './Logger';
+import { tryCatchWrapper, logErrorsWithoutThrowing } from './ErrorHelpers';
 
 /**
  * DOM元素扩展属性

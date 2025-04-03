@@ -1,11 +1,11 @@
 import { TFile, Events, Workspace, EventRef, App } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
-import { DOMSelectorService } from './dom-selector.service';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory, LifecycleError } from '../utils/errors';
-import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/error-helpers';
-import { Logger } from '../utils/logger';
+import { TYPES } from '../types/Symbols';
+import { DOMSelectorService } from './DomSelectorService';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory, LifecycleError } from '../utils/Errors';
+import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
+import { Logger } from '../utils/Logger';
 
 /**
  * 负责处理文件浏览器相关事件的服务

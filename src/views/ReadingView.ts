@@ -1,26 +1,26 @@
 import { MarkdownView, TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
+import { TYPES } from '../types/Symbols';
 import type { TitleChangerPlugin } from '../main';
-import { CacheManager } from '../cache-manager';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
-import { ErrorCategory } from '../utils/errors';
+import { CacheManager } from '../CacheManager';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
 import { 
     tryCatchWrapper, 
     logErrorsWithoutThrowing, 
     measurePerformance
-} from '../utils/error-helpers';
+} from '../utils/ErrorHelpers';
 import { 
     querySelector, 
     querySelectorAll, 
     getAttribute, 
     setAttribute 
-} from '../utils/dom-helpers';
+} from '../utils/DomHelpers';
 import { AbstractView } from './base/abstract-view';
-import { TitleService } from '../services/title.service';
+import { TitleService } from '../services/TitleService';
 import { FileService } from '../services/file.service';
-import { UpdateScheduler } from '../services/update-scheduler.service';
+import { UpdateScheduler } from '../services/UpdateSchedulerService';
 
 /**
  * 阅读视图组件，负责处理预览模式中的标题显示

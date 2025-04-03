@@ -1,11 +1,11 @@
 import { TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { IDOMSelectorService } from '../types/obsidian-extensions';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory, UIError } from '../utils/errors';
-import { tryCatchWrapper, handleSpecificErrors, convertToTitleChangerError, logErrorsWithoutThrowing } from '../utils/error-helpers';
-import { Logger } from '../utils/logger';
-import { TYPES } from '../types/symbols';
+import { IDOMSelectorService } from '../types/ObsidianExtensions';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory, UIError } from '../utils/Errors';
+import { tryCatchWrapper, handleSpecificErrors, convertToTitleChangerError, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
+import { Logger } from '../utils/Logger';
+import { TYPES } from '../types/Symbols';
 
 /**
  * DOM选择器服务，用于查找和选择文件浏览器中的DOM元素

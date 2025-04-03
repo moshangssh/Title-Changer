@@ -1,19 +1,19 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
+import { TYPES } from '../types/Symbols';
 import type { TitleChangerPlugin } from '../main';
-import type { ExplorerView } from './explorer-view';
-import type { EditorLinkView } from './editor-view';
-import type { ReadingView } from './reading-view';
-import type { IViewManager } from '../types/obsidian-extensions';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from '../services/error-manager.service';
-import { ErrorCategory } from '../utils/errors';
+import type { ExplorerView } from './ExplorerView';
+import type { EditorLinkView } from './EditorView';
+import type { ReadingView } from './ReadingView';
+import type { IViewManager } from '../types/ObsidianExtensions';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
 import { 
     tryCatchWrapper, 
     handleEditorOperation,
     logErrorsWithoutThrowing,
     measurePerformance
-} from '../utils/error-helpers';
+} from '../utils/ErrorHelpers';
 
 /**
  * 视图管理器，负责管理和协调所有视图

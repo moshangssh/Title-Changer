@@ -1,6 +1,6 @@
-import { extractWikiLinks } from '../../src/utils/wiki-link-processor';
+import { extractWikiLinks } from '../../src/utils/WikiLinkProcessor';
 import { LinkTitleWidget } from '../../src/components/widgets/LinkTitleWidget';
-import { createSpan, createDiv } from '../../src/utils/dom-helpers';
+import { createSpan, createDiv } from '../../src/utils/DomHelpers';
 
 const mockErrorManager = {
     handleError: jest.fn()

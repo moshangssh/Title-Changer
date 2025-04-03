@@ -1,4 +1,4 @@
-import { ErrorLevel } from '../services/error-manager.service';
+import { ErrorLevel } from '../services/ErrorManagerService';
 
 /**
  * 错误分类枚举

@@ -11,9 +11,9 @@ import {
     getAttribute,
     querySelector,
     querySelectorAll
-} from '../../../src/utils/dom-helpers';
-import { ErrorManagerService } from '../../../src/services/error-manager.service';
-import { Logger } from '../../../src/utils/logger';
+} from '../../../src/utils/DomHelpers';
+import { ErrorManagerService } from '../../../src/services/ErrorManagerService';
+import { Logger } from '../../../src/utils/Logger';
 
 // 模拟错误管理器和日志记录器
 const mockErrorManager = {

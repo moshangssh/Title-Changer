@@ -1,12 +1,12 @@
 import { App, TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/symbols';
+import { TYPES } from '../types/Symbols';
 import { FileService } from './file.service';
-import { CacheManager } from '../cache-manager';
-import { Logger } from '../utils/logger';
-import { ErrorManagerService, ErrorLevel } from './error-manager.service';
-import { ErrorCategory } from '../utils/errors';
-import { tryCatchWrapper } from '../utils/error-helpers';
+import { CacheManager } from '../CacheManager';
+import { Logger } from '../utils/Logger';
+import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
+import { ErrorCategory } from '../utils/Errors';
+import { tryCatchWrapper } from '../utils/ErrorHelpers';
 
 /**
  * 标题服务 - 处理文件标题的获取和缓存
