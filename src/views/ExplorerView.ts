@@ -32,6 +32,7 @@ export class ExplorerView extends AbstractView {
     private static readonly VIEW_ID = 'explorer-view';
     private virtualScrollIntervalId: number | null = null;
     private virtualScrollObserver: MutationObserver | null = null;
+    private viewportReadyTimer: number | null = null;
 
     constructor(
         @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
@@ -61,8 +62,14 @@ export class ExplorerView extends AbstractView {
                 // 注册事件监听器
                 this.registerEvents();
                 
-                // 初始更新
+                // 初始更新 - 加快初始响应时间
                 this.scheduleInitialUpdate();
+                
+                // 再次调度一个延迟更新，确保DOM完全加载
+                this.scheduleViewportReadyUpdate();
+                
+                // 立即执行一次更新
+                this.immediateUpdate();
                 
                 // 注册虚拟滚动监视器
                 this.setupVirtualScrollMonitor();
@@ -140,6 +147,80 @@ export class ExplorerView extends AbstractView {
     }
 
     /**
+     * 安排视图准备就绪后的更新
+     * 确保在Obsidian完全加载后处理所有文件项
+     */
+    private scheduleViewportReadyUpdate(): void {
+        // 清除任何现有的计时器
+        if (this.viewportReadyTimer !== null) {
+            window.clearTimeout(this.viewportReadyTimer);
+        }
+        
+        // 设置一个更长的延迟，等待Obsidian完全渲染界面
+        this.viewportReadyTimer = window.setTimeout(() => {
+            this.safeOperation(
+                () => {
+                    this.logDebug(`[${ExplorerView.VIEW_ID}] 执行视图准备就绪更新`);
+                    // 强制执行立即更新
+                    this.immediateUpdate();
+                    
+                    // 监视文件视图DOM变化，以便在懒加载时更新
+                    this.monitorFileViewChanges();
+                },
+                'ExplorerView',
+                '执行视图准备就绪更新失败',
+                ErrorCategory.UI,
+                ErrorLevel.WARNING,
+                { action: 'scheduleViewportReadyUpdate' }
+            );
+        }, 2000); // 等待2秒，确保Obsidian已完全加载
+    }
+    
+    /**
+     * 监视文件视图的DOM变化
+     * 处理Obsidian延迟加载文件项的情况
+     */
+    private monitorFileViewChanges(): void {
+        this.safeOperation(
+            () => {
+                const fileExplorers = this.domSelector.getFileExplorers();
+                if (fileExplorers.length === 0) return;
+                
+                // 创建新的变更监视器，特别关注新增文件项的情况
+                const observer = new MutationObserver((mutations) => {
+                    const hasRelevantChanges = mutations.some(mutation => 
+                        mutation.type === 'childList' && 
+                        Array.from(mutation.addedNodes).some(node => 
+                            node instanceof HTMLElement && 
+                            (node.classList.contains('nav-file') || 
+                             node.classList.contains('nav-folder'))
+                        )
+                    );
+                    
+                    if (hasRelevantChanges) {
+                        // 仅当检测到文件项变化时执行更新
+                        this.immediateUpdate();
+                    }
+                });
+                
+                // 为每个文件浏览器注册观察器
+                fileExplorers.forEach(explorer => {
+                    observer.observe(explorer, {
+                        childList: true,
+                        subtree: true,
+                        attributes: false
+                    });
+                });
+            },
+            'ExplorerView',
+            '监视文件视图变化失败',
+            ErrorCategory.UI,
+            ErrorLevel.WARNING,
+            { action: 'monitorFileViewChanges' }
+        );
+    }
+
+    /**
      * 立即更新视图，不进行防抖处理
      * 适用于文件重命名等需要立即响应的场景
      */
@@ -158,7 +239,7 @@ export class ExplorerView extends AbstractView {
                 this.updateScheduler.scheduleUpdate(
                     `${ExplorerView.VIEW_ID}-delayed`,
                     () => this.updateView(),
-                    150
+                    100  // 使用较短的延迟提高响应速度
                 );
             },
             'ExplorerView',
@@ -346,6 +427,12 @@ export class ExplorerView extends AbstractView {
                 this.stateService.restoreAllOriginalFilenames(() => 
                     this.domSelector.getTextElements(document.body)
                 );
+                
+                // 清除视图准备就绪计时器
+                if (this.viewportReadyTimer !== null) {
+                    window.clearTimeout(this.viewportReadyTimer);
+                    this.viewportReadyTimer = null;
+                }
             },
             'ExplorerView',
             '卸载文件浏览器视图失败',

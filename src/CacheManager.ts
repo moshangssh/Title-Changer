@@ -26,18 +26,14 @@ export class CacheManager implements ICacheManager {
     }
 
     /**
-     * 记录当前设置状态
+     * 记录当前设置状态信息
      */
     private logSettingsState(): void {
-        if (process.env.NODE_ENV === 'development') {
-            this.logger.debug('当前设置状态:', {
-                regexPattern: this.settings.regexPattern,
-                folderRestrictionEnabled: this.settings.folderRestrictionEnabled,
-                includedFolders: this.settings.folderRestrictionEnabled 
-                    ? this.settings.includedFolders 
-                    : '未启用文件夹限制'
-            });
-        }
+        this.logger.debug('当前缓存设置:', {
+            regexPattern: this.settings.regexPattern,
+            includedFolders: this.settings.includedFolders,
+            enabled: this.settings.enabled
+        });
     }
 
     /**
@@ -152,8 +148,7 @@ export class CacheManager implements ICacheManager {
      */
     private hasSettingsChanged(newSettings: TitleChangerSettings): boolean {
         return this.settings.regexPattern !== newSettings.regexPattern ||
-               this.settings.folderRestrictionEnabled !== newSettings.folderRestrictionEnabled ||
-               JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders)
+               JSON.stringify(this.settings.includedFolders) !== JSON.stringify(newSettings.includedFolders);
     }
 
     getDisplayTitle(fileName: string): string | null {
@@ -162,5 +157,22 @@ export class CacheManager implements ICacheManager {
 
     updateTitleCache(fileName: string, displayTitle: string): void {
         this.titleCache.set(fileName, displayTitle);
+    }
+    
+    /**
+     * 获取所有缓存的标题
+     * @returns 文件名到标题的映射
+     */
+    getAllTitles(): Map<string, string> {
+        const result = new Map<string, string>();
+        
+        // 只返回非null的标题
+        this.titleCache.forEach((title, file) => {
+            if (title !== null) {
+                result.set(file, title);
+            }
+        });
+        
+        return result;
     }
 } 

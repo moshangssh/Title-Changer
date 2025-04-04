@@ -1,7 +1,7 @@
 /**
  * 标题状态服务 - 整合CodeMirror状态系统和现有缓存管理
  */
-import { App, TFile, MarkdownView } from 'obsidian';
+import { App, TFile, MarkdownView, Events } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { EditorState, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
@@ -14,6 +14,7 @@ import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';
 import { createTitleStateExtension, TitleStateField } from '../components/extensions/TitleStateExtension';
 import { getEditorView } from '../utils/EditorUtils';
+import type { TitleChangerPlugin } from '../main';
 
 /**
  * 标题状态服务 - 将传统缓存管理与CodeMirror状态系统整合
@@ -24,6 +25,7 @@ export class TitleStateService {
     
     constructor(
         @inject(TYPES.App) private app: App,
+        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
         @inject(TYPES.TitleService) private titleService: TitleService,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
         @inject(TYPES.Logger) private logger: Logger,
@@ -46,6 +48,9 @@ export class TitleStateService {
                 
                 // 初始化现有缓存映射
                 this.syncCacheToState();
+                
+                // 注册文件打开事件，确保状态同步
+                this.registerEvents();
             },
             'TitleStateService',
             this.errorManager,
@@ -55,6 +60,56 @@ export class TitleStateService {
                 category: ErrorCategory.STATE,
                 level: ErrorLevel.WARNING,
                 details: { action: 'initialize' }
+            }
+        );
+    }
+    
+    /**
+     * 注册必要的事件监听器
+     */
+    private registerEvents(): void {
+        tryCatchWrapper(
+            () => {
+                // 监听文件打开事件
+                this.plugin.registerEvent(
+                    this.app.workspace.on('file-open', (file) => {
+                        if (file instanceof TFile) {
+                            // 文件打开时，确保标题状态同步
+                            const title = this.cacheManager.processFile(file);
+                            if (title) {
+                                this.updateStateForAllEditors(file.basename, title);
+                            }
+                        }
+                    })
+                );
+                
+                // 监听活动编辑器变更事件
+                this.plugin.registerEvent(
+                    this.app.workspace.on('active-leaf-change', (leaf) => {
+                        if (leaf && leaf.view instanceof MarkdownView) {
+                            // 编辑器激活时，同步当前文件的标题状态
+                            const file = leaf.view.file;
+                            if (file) {
+                                const title = this.cacheManager.processFile(file);
+                                if (title) {
+                                    this.updateStateForAllEditors(file.basename, title);
+                                }
+                            }
+                        }
+                    })
+                );
+                
+                this.logger.info('标题状态服务事件已注册');
+                return true;
+            },
+            'TitleStateService',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '注册标题状态事件失败',
+                category: ErrorCategory.LIFECYCLE,
+                level: ErrorLevel.WARNING,
+                details: { action: 'registerEvents' }
             }
         );
     }
@@ -128,7 +183,7 @@ export class TitleStateService {
         tryCatchWrapper(
             () => {
                 // 更新缓存
-                this.cacheManager.setDisplayTitle(file.basename, title);
+                this.cacheManager.updateTitleCache(file.basename, title);
                 
                 // 更新状态系统
                 this.updateStateForAllEditors(file.basename, title);
@@ -186,7 +241,7 @@ export class TitleStateService {
      * @returns 标题或undefined
      */
     getTitleFromState(state: EditorState, fileName: string): string | undefined {
-        return tryCatchWrapper(
+        const result = tryCatchWrapper(
             () => {
                 return this.titleStateField.getTitle(state, fileName);
             },
@@ -200,6 +255,8 @@ export class TitleStateService {
                 details: { action: 'getTitleFromState', fileName }
             }
         );
+        // 确保返回类型正确
+        return result === null ? undefined : result;
     }
     
     /**
@@ -240,25 +297,31 @@ export class TitleStateService {
      * @param fileName 文件名
      * @param fallbackToOriginal 如果没有找到标题是否返回原始文件名
      */
-    getTitle(fileName: string, fallbackToOriginal = true): string | null {
-        return tryCatchWrapper(
+    getTitle(fileName: string, fallbackToOriginal = true): string | undefined {
+        const result = tryCatchWrapper(
             () => {
                 // 先获取活动编辑器视图
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (activeView) {
                     const editorView = getEditorView(activeView.leaf);
                     if (editorView) {
+                        // 尝试从编辑器状态获取标题
                         const state = editorView.state;
-                        // 尝试从状态获取
-                        const stateTitle = this.titleStateField.getTitle(state, fileName);
-                        if (stateTitle) {
-                            return stateTitle;
+                        const title = this.getTitleFromState(state, fileName);
+                        if (title) {
+                            return title;
                         }
                     }
                 }
                 
-                // 回退到传统缓存
-                return this.titleService.getDisplayTitle(fileName, fallbackToOriginal);
+                // 回退到缓存获取
+                const cachedTitle = this.titleService.getDisplayTitle(fileName, false);
+                if (cachedTitle) {
+                    return cachedTitle;
+                }
+                
+                // 如果设置了回退，则返回原始文件名
+                return fallbackToOriginal ? fileName : undefined;
             },
             'TitleStateService',
             this.errorManager,
@@ -267,8 +330,11 @@ export class TitleStateService {
                 errorMessage: '获取标题失败',
                 category: ErrorCategory.STATE,
                 level: ErrorLevel.WARNING,
-                details: { action: 'getTitle', fileName }
+                details: { action: 'getTitle', fileName, fallbackToOriginal }
             }
-        ) || (fallbackToOriginal ? fileName : null);
+        );
+        
+        // 确保返回类型正确
+        return result === null ? (fallbackToOriginal ? fileName : undefined) : result;
     }
 } 

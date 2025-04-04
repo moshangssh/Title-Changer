@@ -17,6 +17,7 @@ export class ExplorerEventsService {
     private observers: MutationObserver[] = [];
     private immediateUpdateFn: (() => void) | null = null;
     private scrollEventListeners: Array<{element: HTMLElement, listener: EventListener}> = [];
+    private viewportObserver: IntersectionObserver | null = null;
 
     constructor(
         @inject(TYPES.App) private app: App,
@@ -59,6 +60,7 @@ export class ExplorerEventsService {
                 this.registerFileEvents(() => {}, callback);
                 this.registerLayoutEvents(callback);
                 this.registerScrollEvents(callback);
+                this.registerViewportEvents(callback);
                 return true;
             },
             this.constructor.name,
@@ -305,8 +307,14 @@ export class ExplorerEventsService {
                             () => {
                                 // 刷新选择器配置
                                 this.domSelector.refreshSelectors();
-                                // 执行更新回调
-                                updateCallback();
+                                
+                                // 使用立即更新以提高响应速度
+                                if (this.immediateUpdateFn) {
+                                    this.immediateUpdateFn();
+                                } else {
+                                    // 执行更新回调
+                                    updateCallback();
+                                }
                                 return true;
                             },
                             this.constructor.name,
@@ -327,10 +335,32 @@ export class ExplorerEventsService {
                     this.app.workspace.on('active-leaf-change', (leaf) => {
                         logErrorsWithoutThrowing(
                             () => {
-                                // 如果切换到文件浏览器，刷新选择器并更新
-                                if (leaf && leaf.view && leaf.view.getViewType() === 'file-explorer') {
+                                // 如果切换到文件浏览器或文件相关视图，刷新选择器并立即更新
+                                const viewType = leaf?.view?.getViewType();
+                                if (leaf && leaf.view && (
+                                    viewType === 'file-explorer' || 
+                                    viewType === 'markdown' || 
+                                    viewType === 'empty'
+                                )) {
                                     this.domSelector.refreshSelectors();
-                                    updateCallback();
+                                    
+                                    // 使用立即更新函数进行快速更新
+                                    if (this.immediateUpdateFn) {
+                                        this.immediateUpdateFn();
+                                    } else {
+                                        updateCallback();
+                                    }
+                                    
+                                    // 如果是文件浏览器视图，在200ms后再次更新以确保所有内容都被处理
+                                    if (viewType === 'file-explorer') {
+                                        setTimeout(() => {
+                                            if (this.immediateUpdateFn) {
+                                                this.immediateUpdateFn();
+                                            } else {
+                                                updateCallback();
+                                            }
+                                        }, 200);
+                                    }
                                 }
                                 return true;
                             },
@@ -343,6 +373,35 @@ export class ExplorerEventsService {
                                 level: ErrorLevel.WARNING,
                                 defaultValue: false,
                                 details: { leafViewType: leaf?.view?.getViewType() }
+                            }
+                        );
+                    })
+                );
+                
+                // 监听文件打开事件
+                this.plugin.registerEvent(
+                    this.app.workspace.on('file-open', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file) {
+                                    // 文件打开时更新文件浏览器视图，确保标题显示正确
+                                    if (this.immediateUpdateFn) {
+                                        this.immediateUpdateFn();
+                                    } else {
+                                        updateCallback();
+                                    }
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件打开事件失败',
+                                category: ErrorCategory.UI,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { fileName: file?.path || 'unknown' }
                             }
                         );
                     })
@@ -492,6 +551,111 @@ export class ExplorerEventsService {
     }
 
     /**
+     * 注册视口变化观察器，以便在文件项可见性变化时更新标题
+     * @param updateCallback 更新回调函数
+     */
+    public registerViewportEvents(updateCallback: () => void): void {
+        logErrorsWithoutThrowing(
+            () => {
+                // 如果已经存在视口观察器，先清理
+                if (this.viewportObserver) {
+                    this.viewportObserver.disconnect();
+                    this.viewportObserver = null;
+                }
+                
+                // 创建新的视口观察器
+                this.viewportObserver = new IntersectionObserver(
+                    (entries) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                // 检测到至少一个文件项进入视口
+                                const hasVisibleEntries = entries.some(entry => entry.isIntersecting);
+                                if (hasVisibleEntries) {
+                                    // 检查是否有文件项缺少处理的标题
+                                    const explorers = this.domSelector.getFileExplorers();
+                                    if (explorers && explorers.length > 0) {
+                                        // 使用立即更新函数，避免延迟
+                                        if (this.immediateUpdateFn) {
+                                            this.immediateUpdateFn();
+                                        } else {
+                                            updateCallback();
+                                        }
+                                    }
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理视口观察事件失败',
+                                category: ErrorCategory.UI,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { entriesCount: entries.length }
+                            }
+                        );
+                    },
+                    {
+                        // 配置为文件项进入视口后立即触发
+                        threshold: 0.1,
+                        // 仅观察可见区域内的变化
+                        rootMargin: "0px"
+                    }
+                );
+                
+                // 延迟配置观察器，等待DOM完全加载
+                setTimeout(() => {
+                    logErrorsWithoutThrowing(
+                        () => {
+                            // 获取文件浏览器元素
+                            const explorers = this.domSelector.getFileExplorers();
+                            if (!explorers || explorers.length === 0) {
+                                this.logger.warn('未找到文件浏览器元素，视口观察器未配置');
+                                return false;
+                            }
+                            
+                            // 为每个浏览器中的文件项注册观察器
+                            explorers.forEach(explorer => {
+                                const fileItems = this.domSelector.getFileItems(explorer);
+                                fileItems.forEach(item => {
+                                    this.viewportObserver?.observe(item);
+                                });
+                                
+                                // 也观察整个文件浏览器容器
+                                this.viewportObserver?.observe(explorer);
+                            });
+                            
+                            return true;
+                        },
+                        this.constructor.name,
+                        this.errorManager,
+                        this.logger,
+                        {
+                            errorMessage: '配置视口观察器失败',
+                            category: ErrorCategory.UI,
+                            level: ErrorLevel.WARNING,
+                            defaultValue: false
+                        }
+                    );
+                }, 1000); // 1秒延迟确保DOM已加载
+                
+                return true;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '注册视口事件失败',
+                category: ErrorCategory.LIFECYCLE,
+                level: ErrorLevel.WARNING,
+                defaultValue: false,
+                details: { updateCallbackProvided: !!updateCallback }
+            }
+        );
+    }
+
+    /**
      * 注销所有事件
      */
     unregisterAll(): void {
@@ -519,6 +683,12 @@ export class ExplorerEventsService {
                     }
                 });
                 this.scrollEventListeners = [];
+                
+                // 清理视口观察器
+                if (this.viewportObserver) {
+                    this.viewportObserver.disconnect();
+                    this.viewportObserver = null;
+                }
                 
                 return true;
             },

@@ -1,6 +1,6 @@
 import { App, Plugin, Vault } from 'obsidian';
 import { Container } from 'inversify';
-import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab } from './settings';
+import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab, FOLDER_SELECTOR_STYLES } from './settings';
 import { ViewManager } from './views/ViewManager';
 import { CacheManager } from './CacheManager';
 import { TYPES } from './types/Symbols';
@@ -36,6 +36,9 @@ export class TitleChangerPlugin extends Plugin {
         // 获取Logger服务
         this.logger = this.container.get<Logger>(TYPES.Logger);
         this.logger.info('加载 Title Changer 插件');
+
+        // 加载样式
+        this.loadStyles();
 
         // 获取服务实例
         this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
@@ -92,6 +95,10 @@ export class TitleChangerPlugin extends Plugin {
 
     onunload() {
         this.logger.info('卸载 Title Changer 插件');
+        
+        // 移除样式
+        const styleEl = document.getElementById('title-changer-folder-selector-styles');
+        if (styleEl) styleEl.remove();
         
         // 卸载视图管理器
         if (this.viewManager) {
@@ -172,5 +179,14 @@ export class TitleChangerPlugin extends Plugin {
      */
     getErrorManager(): ErrorManagerService {
         return this.container.get<ErrorManagerService>(TYPES.ErrorManager);
+    }
+
+    // 添加样式
+    private loadStyles() {
+        // 添加文件夹选择器样式
+        document.head.createEl('style', {
+            attr: { id: 'title-changer-folder-selector-styles' },
+            text: FOLDER_SELECTOR_STYLES
+        });
     }
 } 

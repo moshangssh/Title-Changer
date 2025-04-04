@@ -3,6 +3,7 @@ import { TitleChangerSettings } from '../settings';
 
 // BUG: 包含的文件夹功能不支持递归子文件夹
 // Affects: folder-checker.ts
+// 已修复: 现在支持递归子文件夹
 
 export class FolderChecker {
     /**
@@ -25,8 +26,14 @@ export class FolderChecker {
             // 规范化文件夹路径，确保它们以 / 结尾
             const normalizedFolder = this.normalizePath(folder);
             
-            // 始终启用递归子文件夹模式：检查文件路径是否以包含的文件夹开头
-            return filePath.startsWith(normalizedFolder);
+            // 检查文件路径是否与文件夹匹配
+            // 支持三种情况:
+            // 1. 完全匹配 (file.path === normalizedFolder)
+            // 2. 直接子文件 (filePath === normalizedFolder)
+            // 3. 子文件夹内的文件 (filePath.startsWith(normalizedFolder))
+            return filePath === normalizedFolder || 
+                   file.path === normalizedFolder || 
+                   filePath.startsWith(normalizedFolder);
         });
         
         return result;

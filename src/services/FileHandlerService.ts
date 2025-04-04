@@ -125,30 +125,34 @@ export class FileHandlerService {
                 if (!(file instanceof TFile)) return null;
 
                 // 保存原始显示文本
-                const originalText = this.safeGetTextContent(titleEl) || file.basename;
+                const currentText = this.safeGetTextContent(titleEl);
+                const originalText = file.basename;
+                
+                // 总是保存原始文本，确保我们有正确的基准
                 stateService.saveOriginalText(titleEl, originalText);
 
                 // 如果禁用插件，则恢复原始文件名
                 if (!enabled) {
                     // 恢复原始文件名
-                    const savedText = stateService.getOriginalText(titleEl);
-                    if (savedText && this.safeGetTextContent(titleEl) !== savedText) {
-                        this.safeSetTextContent(titleEl, savedText);
+                    if (currentText !== originalText) {
+                        this.safeSetTextContent(titleEl, originalText);
                     }
                     return true;
                 }
 
-                // 获取显示标题
+                // 获取显示标题 - 强制重新处理文件确保最新状态
                 const displayTitle = cacheManager.processFile(file);
 
                 // 如果有自定义显示标题，更新显示
                 if (displayTitle) {
-                    this.safeSetTextContent(titleEl, displayTitle);
+                    // 仅当当前显示的文本与目标显示标题不同时才更新
+                    if (currentText !== displayTitle) {
+                        this.safeSetTextContent(titleEl, displayTitle);
+                    }
                 } else {
-                    // 恢复原始文件名
-                    const savedText = stateService.getOriginalText(titleEl);
-                    if (this.safeGetTextContent(titleEl) !== savedText) {
-                        this.safeSetTextContent(titleEl, savedText !== undefined ? savedText : file.basename);
+                    // 如果没有自定义标题，显示原始文件名
+                    if (currentText !== originalText) {
+                        this.safeSetTextContent(titleEl, originalText);
                     }
                 }
                 
