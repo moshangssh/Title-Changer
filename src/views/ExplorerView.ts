@@ -5,7 +5,7 @@ import type { TitleChangerPlugin } from '../main';
 import { DOMSelectorService } from '../services/DomSelectorService';
 import { ExplorerEventsService } from '../services/ExplorerEventsService';
 import { FileHandlerService } from '../services/FileHandlerService';
-import { ExplorerStateService } from '../services/explorer-state.service';
+import { ExplorerStateService } from '../services/ExplorerStateService';
 import { CacheManager } from '../CacheManager';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';

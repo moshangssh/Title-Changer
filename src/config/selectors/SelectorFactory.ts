@@ -2,9 +2,9 @@
  * 选择器工厂
  * 根据Obsidian版本提供适当的选择器配置
  */
-import { baseSelectors, detectObsidianVersion, SelectorVersion } from './base-selectors';
-import { modernSelectors } from './modern-selectors';
-import { legacySelectors } from './legacy-selectors';
+import { baseSelectors, detectObsidianVersion, SelectorVersion } from './BaseSelectors';
+import { modernSelectors } from './ModernSelectors';
+import { legacySelectors } from './LegacySelectors';
 import { Logger } from '../../utils/Logger';
 import { injectable, inject, optional } from 'inversify';
 import { TYPES } from '../../types/Symbols';

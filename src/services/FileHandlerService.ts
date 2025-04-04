@@ -2,7 +2,7 @@ import { TFile, Vault } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/Symbols';
 import { CacheManager } from '../CacheManager';
-import { ExplorerStateService } from './explorer-state.service';
+import { ExplorerStateService } from './ExplorerStateService';
 import { DOMSelectorService } from './DomSelectorService';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';

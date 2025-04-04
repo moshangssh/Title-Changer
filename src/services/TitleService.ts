@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/Symbols';
-import { FileService } from './file.service';
+import { FileService } from './FileService';
 import { CacheManager } from '../CacheManager';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';

@@ -2,7 +2,7 @@
  * 旧版Obsidian选择器配置 (v0.9.x 及更早)
  * 适用于使用传统UI的Obsidian版本
  */
-import { baseSelectors } from './base-selectors';
+import { baseSelectors } from './BaseSelectors';
 
 export const legacySelectors = {
     // 扩展基础选择器

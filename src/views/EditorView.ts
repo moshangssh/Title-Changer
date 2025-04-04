@@ -19,7 +19,7 @@ import { extractWikiLinks, shouldReplaceTitle } from '../utils/WikiLinkProcessor
 import { getAttribute } from '../utils/DomHelpers';
 import { AbstractView } from './base/abstract-view';
 import { TitleService } from '../services/TitleService';
-import { FileService } from '../services/file.service';
+import { FileService } from '../services/FileService';
 import { UpdateScheduler } from '../services/UpdateSchedulerService';
 import { 
     getEditorView, 
