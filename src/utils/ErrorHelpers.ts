@@ -506,4 +506,90 @@ export function handleDataOperation<T>(
     errorManager.handleError(errorObj, ErrorLevel.WARNING);
     return null;
   }
+}
+
+/**
+ * 错误处理装饰器 - 用于类方法
+ * 自动包装方法并进行错误处理
+ * 
+ * @param component 组件名称，如果不提供则使用类名
+ * @param options 错误处理选项
+ */
+export function ErrorHandler(
+    options?: {
+        errorMessage?: string;
+        category?: ErrorCategory;
+        level?: ErrorLevel;
+        userVisible?: boolean;
+    }
+) {
+    return function (
+        target: any,
+        propertyKey: string,
+        descriptor: PropertyDescriptor
+    ) {
+        const originalMethod = descriptor.value;
+        const className = target.constructor.name;
+        const component = options?.errorMessage ? className : className + '.' + propertyKey;
+
+        descriptor.value = function(...args: any[]) {
+            try {
+                const result = originalMethod.apply(this, args);
+                if (result instanceof Promise) {
+                    return result.catch((error) => {
+                        // 检查是否有errorManager和logger
+                        const hasErrorManager = this && 'errorManager' in this;
+                        const hasLogger = this && 'logger' in this;
+                        
+                        if (hasErrorManager && hasLogger) {
+                            const errorObj = convertToTitleChangerError(
+                                error,
+                                component,
+                                options?.category || ErrorCategory.UNKNOWN,
+                                options?.userVisible ?? false
+                            );
+                            (this as any).errorManager.handleError(
+                                errorObj,
+                                options?.level || ErrorLevel.ERROR
+                            );
+                            (this as any).logger.error(
+                                options?.errorMessage || `${propertyKey} 方法执行失败`,
+                                { error: extractErrorDetails(error), args }
+                            );
+                        } else {
+                            console.error(`${component}: ${options?.errorMessage || `${propertyKey} 方法执行失败`}`, error);
+                        }
+                        return null;
+                    });
+                }
+                return result;
+            } catch (error) {
+                // 检查是否有errorManager和logger
+                const hasErrorManager = this && 'errorManager' in this;
+                const hasLogger = this && 'logger' in this;
+                
+                if (hasErrorManager && hasLogger) {
+                    const errorObj = convertToTitleChangerError(
+                        error,
+                        component,
+                        options?.category || ErrorCategory.UNKNOWN,
+                        options?.userVisible ?? false
+                    );
+                    (this as any).errorManager.handleError(
+                        errorObj,
+                        options?.level || ErrorLevel.ERROR
+                    );
+                    (this as any).logger.error(
+                        options?.errorMessage || `${propertyKey} 方法执行失败`,
+                        { error: extractErrorDetails(error), args }
+                    );
+                } else {
+                    console.error(`${component}: ${options?.errorMessage || `${propertyKey} 方法执行失败`}`, error);
+                }
+                return null;
+            }
+        };
+
+        return descriptor;
+    };
 } 

@@ -31,6 +31,7 @@ import { UpdateScheduler } from '../services/UpdateSchedulerService';
 export class ExplorerView extends AbstractView {
     private static readonly VIEW_ID = 'explorer-view';
     private virtualScrollIntervalId: number | null = null;
+    private virtualScrollObserver: MutationObserver | null = null;
 
     constructor(
         @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
@@ -219,47 +220,96 @@ export class ExplorerView extends AbstractView {
 
     /**
      * 设置监视虚拟滚动的逻辑
-     * 用于处理Obsidian中使用的虚拟滚动导致的视图变化
+     * 用于处理Obsidian中使用的虚拟滚动导致的DOM变化
      */
     private setupVirtualScrollMonitor(): void {
-        // 使用长轮询来检测因虚拟滚动导致的DOM变化
-        const checkInterval = 1000; // 每秒检查一次
-        
-        // 记录上次看到的文件条目数量
-        let lastKnownItemCount = 0;
-        
-        // 定期检查文件条目数量是否变化
-        const intervalId = window.setInterval(() => {
-            logErrorsWithoutThrowing(
-                () => {
-                    const explorers = this.domSelector.getFileExplorers();
-                    let totalItems = 0;
-                    
-                    explorers.forEach(explorer => {
-                        const fileItems = this.domSelector.getFileItems(explorer);
-                        totalItems += fileItems.length;
+        logErrorsWithoutThrowing(
+            () => {
+                // 记录上次看到的文件条目数量
+                let lastKnownItemCount = 0;
+                
+                // 创建虚拟滚动观察器
+                const scrollObserver = new MutationObserver((mutations) => {
+                    logErrorsWithoutThrowing(
+                        () => {
+                            // 检查是否有相关DOM变化
+                            const hasRelevantChanges = mutations.some(mutation => 
+                                mutation.type === 'childList' || 
+                                (mutation.type === 'attributes' && 
+                                 (mutation.attributeName === 'style' || 
+                                  mutation.attributeName === 'class'))
+                            );
+                            
+                            if (!hasRelevantChanges) return true;
+                            
+                            // 计算当前可见文件条目的数量
+                            const explorers = this.domSelector.getFileExplorers();
+                            let totalItems = 0;
+                            
+                            explorers.forEach(explorer => {
+                                const fileItems = this.domSelector.getFileItems(explorer);
+                                totalItems += fileItems.length;
+                            });
+                            
+                            // 如果文件条目数量变化较大，更新视图
+                            if (totalItems !== 0 && Math.abs(totalItems - lastKnownItemCount) > 2) {
+                                lastKnownItemCount = totalItems;
+                                this.scheduleUpdate();
+                            }
+                            
+                            return true;
+                        },
+                        'ExplorerView',
+                        this.errorManager,
+                        this.logger,
+                        {
+                            errorMessage: '处理虚拟滚动变化失败',
+                            category: ErrorCategory.UI,
+                            level: ErrorLevel.WARNING,
+                            defaultValue: false,
+                            details: { mutationsCount: mutations.length }
+                        }
+                    );
+                });
+                
+                // 为所有文件浏览器元素注册观察器
+                const explorers = this.domSelector.getFileExplorers();
+                explorers.forEach(explorer => {
+                    // 同时观察文件浏览器和其可能的虚拟滚动容器
+                    scrollObserver.observe(explorer, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        attributeFilter: ['style', 'class', 'data-path']
                     });
                     
-                    // 如果文件条目数量变化，可能是由于虚拟滚动加载了新内容
-                    if (totalItems !== 0 && Math.abs(totalItems - lastKnownItemCount) > 2) {
-                        lastKnownItemCount = totalItems;
-                        this.scheduleUpdate();
+                    // 尝试找到虚拟滚动容器并观察
+                    const scrollContainer = explorer.closest('.nav-files-container') || 
+                                           explorer.closest('.workspace-leaf-content');
+                    if (scrollContainer && scrollContainer !== explorer) {
+                        scrollObserver.observe(scrollContainer, {
+                            childList: true,
+                            attributes: true,
+                            attributeFilter: ['style', 'class']
+                        });
                     }
-                },
-                'ExplorerView',
-                this.errorManager,
-                this.logger,
-                {
-                    errorMessage: '监视虚拟滚动失败',
-                    category: ErrorCategory.UI,
-                    level: ErrorLevel.DEBUG,
-                    details: { action: 'virtualScrollMonitor' }
-                }
-            );
-        }, checkInterval);
-        
-        // 保存间隔ID以便在卸载时清除
-        this.virtualScrollIntervalId = intervalId;
+                });
+                
+                // 保存观察器引用，用于卸载时清理
+                this.virtualScrollObserver = scrollObserver;
+                
+                return true;
+            },
+            'ExplorerView',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '设置虚拟滚动监视器失败',
+                category: ErrorCategory.LIFECYCLE,
+                level: ErrorLevel.WARNING,
+                defaultValue: false
+            }
+        );
     }
 
     /**
@@ -275,17 +325,27 @@ export class ExplorerView extends AbstractView {
                 this.updateScheduler.cancelScheduledUpdate(`${ExplorerView.VIEW_ID}-initial`);
                 this.updateScheduler.cancelScheduledUpdate(`${ExplorerView.VIEW_ID}-delayed`);
                 
-                // 清除虚拟滚动监视器
+                // 卸载事件服务
+                if (this.eventsService) {
+                    this.eventsService.unregisterAll();
+                }
+                
+                // 清理虚拟滚动观察器
+                if (this.virtualScrollObserver) {
+                    this.virtualScrollObserver.disconnect();
+                    this.virtualScrollObserver = null;
+                }
+                
+                // 清理可能的残留计时器
                 if (this.virtualScrollIntervalId !== null) {
                     window.clearInterval(this.virtualScrollIntervalId);
                     this.virtualScrollIntervalId = null;
                 }
                 
-                // 清理所有事件
-                this.eventsService.unregisterAll();
-                
                 // 恢复所有原始文件名
-                this.stateService.restoreAllOriginalFilenames(() => this.domSelector.getTextElements(document.body));
+                this.stateService.restoreAllOriginalFilenames(() => 
+                    this.domSelector.getTextElements(document.body)
+                );
             },
             'ExplorerView',
             '卸载文件浏览器视图失败',

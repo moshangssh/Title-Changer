@@ -141,7 +141,7 @@ export class ViewManager implements IViewManager {
                 );
                 
                 // 对于可能尚未完全加载的阅读视图内容，延迟再次更新
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     logErrorsWithoutThrowing(
                         () => this.readingView.updateView(),
                         'ViewManager',
@@ -154,7 +154,7 @@ export class ViewManager implements IViewManager {
                             details: { component: 'readingView', action: 'delayed' }
                         }
                     );
-                }, 300);
+                });
             },
             'ViewManager',
             200, // 性能阈值(ms)
@@ -183,7 +183,7 @@ export class ViewManager implements IViewManager {
                     }
                 );
                 
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     logErrorsWithoutThrowing(
                         () => this.updateAllViews(),
                         'ViewManager',
@@ -196,7 +196,7 @@ export class ViewManager implements IViewManager {
                             details: { action: 'onSettingsChanged:delayed' }
                         }
                     );
-                }, 100);
+                });
             },
             'ViewManager',
             this.errorManager,

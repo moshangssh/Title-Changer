@@ -1,4 +1,4 @@
-import { TFile, Events, Workspace, EventRef, App } from 'obsidian';
+import { TFile, Events, Workspace, EventRef, App, WorkspaceLeaf } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/Symbols';
 import { DOMSelectorService } from './DomSelectorService';
@@ -6,6 +6,8 @@ import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory, LifecycleError } from '../utils/Errors';
 import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
 import { Logger } from '../utils/Logger';
+import type { IDOMSelectorService } from '../types/ObsidianExtensions';
+import type { TitleChangerPlugin } from '../main';
 
 /**
  * 负责处理文件浏览器相关事件的服务
@@ -13,13 +15,13 @@ import { Logger } from '../utils/Logger';
 @injectable()
 export class ExplorerEventsService {
     private observers: MutationObserver[] = [];
-    private eventRefs: EventRef[] = [];
     private immediateUpdateFn: (() => void) | null = null;
     private scrollEventListeners: Array<{element: HTMLElement, listener: EventListener}> = [];
 
     constructor(
         @inject(TYPES.App) private app: App,
-        @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService,
+        @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+        @inject(TYPES.DOMSelectorService) private domSelector: IDOMSelectorService,
         @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService,
         @inject(TYPES.Logger) private logger: Logger
     ) {}
@@ -150,120 +152,126 @@ export class ExplorerEventsService {
     ): void {
         logErrorsWithoutThrowing(
             () => {
+                // 使用Obsidian的registerEvent方法注册文件事件
+                
                 // 监听文件重命名
-                const renameRef = this.app.vault.on('rename', (file) => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (file instanceof TFile) {
-                                invalidateCallback(file);
-                                
-                                // 使用立即更新函数，避免循环依赖
-                                if (this.immediateUpdateFn) {
-                                    this.immediateUpdateFn();
-                                } else {
-                                    // 回退到普通更新
-                                    updateCallback();
-                                    setTimeout(() => updateCallback(), 100);
+                this.plugin.registerEvent(
+                    this.app.vault.on('rename', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file instanceof TFile) {
+                                    invalidateCallback(file);
+                                    
+                                    // 使用立即更新函数，避免循环依赖
+                                    if (this.immediateUpdateFn) {
+                                        this.immediateUpdateFn();
+                                    } else {
+                                        // 回退到普通更新
+                                        updateCallback();
+                                        setTimeout(() => updateCallback(), 100);
+                                    }
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件重命名事件失败',
+                                category: ErrorCategory.FILE,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { 
+                                    fileName: file instanceof TFile ? file.path : 'unknown',
+                                    eventType: 'rename'
                                 }
                             }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理文件重命名事件失败',
-                            category: ErrorCategory.FILE,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false,
-                            details: { 
-                                fileName: file instanceof TFile ? file.path : 'unknown',
-                                eventType: 'rename'
-                            }
-                        }
-                    );
-                });
-                this.eventRefs.push(renameRef);
+                        );
+                    })
+                );
 
                 // 监听文件创建
-                const createRef = this.app.vault.on('create', (file) => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (file instanceof TFile) {
-                                updateCallback();
+                this.plugin.registerEvent(
+                    this.app.vault.on('create', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file instanceof TFile) {
+                                    updateCallback();
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件创建事件失败',
+                                category: ErrorCategory.FILE,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { 
+                                    fileName: file instanceof TFile ? file.path : 'unknown',
+                                    eventType: 'create'
+                                }
                             }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理文件创建事件失败',
-                            category: ErrorCategory.FILE,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false,
-                            details: { 
-                                fileName: file instanceof TFile ? file.path : 'unknown',
-                                eventType: 'create'
-                            }
-                        }
-                    );
-                });
-                this.eventRefs.push(createRef);
+                        );
+                    })
+                );
 
                 // 监听文件删除
-                const deleteRef = this.app.vault.on('delete', (file) => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (file instanceof TFile) {
-                                invalidateCallback(file);
-                                updateCallback();
+                this.plugin.registerEvent(
+                    this.app.vault.on('delete', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file instanceof TFile) {
+                                    invalidateCallback(file);
+                                    updateCallback();
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件删除事件失败',
+                                category: ErrorCategory.FILE,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { 
+                                    fileName: file instanceof TFile ? file.path : 'unknown',
+                                    eventType: 'delete'
+                                }
                             }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理文件删除事件失败',
-                            category: ErrorCategory.FILE,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false,
-                            details: { 
-                                fileName: file instanceof TFile ? file.path : 'unknown',
-                                eventType: 'delete'
-                            }
-                        }
-                    );
-                });
-                this.eventRefs.push(deleteRef);
+                        );
+                    })
+                );
                 
                 // 监听文件修改
-                const modifyRef = this.app.vault.on('modify', (file) => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (file instanceof TFile) {
-                                invalidateCallback(file);
-                                updateCallback();
+                this.plugin.registerEvent(
+                    this.app.vault.on('modify', (file) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                if (file instanceof TFile) {
+                                    invalidateCallback(file);
+                                    updateCallback();
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理文件修改事件失败',
+                                category: ErrorCategory.FILE,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { 
+                                    fileName: file instanceof TFile ? file.path : 'unknown',
+                                    eventType: 'modify'
+                                }
                             }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理文件修改事件失败',
-                            category: ErrorCategory.FILE,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false,
-                            details: { 
-                                fileName: file instanceof TFile ? file.path : 'unknown',
-                                eventType: 'modify'
-                            }
-                        }
-                    );
-                });
-                this.eventRefs.push(modifyRef);
+                        );
+                    })
+                );
                 
                 return true;
             },
@@ -284,54 +292,61 @@ export class ExplorerEventsService {
     }
 
     /**
-     * 注册布局事件
+     * 注册布局相关事件
      * @param updateCallback 更新回调函数
      */
     public registerLayoutEvents(updateCallback: () => void): void {
         logErrorsWithoutThrowing(
             () => {
                 // 监听布局变化
-                const layoutRef = this.app.workspace.on('layout-change', () => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            updateCallback();
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理布局变更事件失败',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false
-                        }
-                    );
-                });
-                this.eventRefs.push(layoutRef);
+                this.plugin.registerEvent(
+                    this.app.workspace.on('layout-change', () => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                // 刷新选择器配置
+                                this.domSelector.refreshSelectors();
+                                // 执行更新回调
+                                updateCallback();
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理布局变更事件失败',
+                                category: ErrorCategory.UI,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false
+                            }
+                        );
+                    })
+                );
 
                 // 监听活动叶子变化
-                const leafRef = this.app.workspace.on('active-leaf-change', (leaf) => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (leaf && leaf.view && leaf.view.getViewType() === 'file-explorer') {
-                                updateCallback();
+                this.plugin.registerEvent(
+                    this.app.workspace.on('active-leaf-change', (leaf) => {
+                        logErrorsWithoutThrowing(
+                            () => {
+                                // 如果切换到文件浏览器，刷新选择器并更新
+                                if (leaf && leaf.view && leaf.view.getViewType() === 'file-explorer') {
+                                    this.domSelector.refreshSelectors();
+                                    updateCallback();
+                                }
+                                return true;
+                            },
+                            this.constructor.name,
+                            this.errorManager,
+                            this.logger,
+                            {
+                                errorMessage: '处理活动叶子变更事件失败',
+                                category: ErrorCategory.UI,
+                                level: ErrorLevel.WARNING,
+                                defaultValue: false,
+                                details: { leafViewType: leaf?.view?.getViewType() }
                             }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '处理活动叶子变更事件失败',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.WARNING,
-                            defaultValue: false,
-                            details: { leafViewType: leaf?.view?.getViewType() }
-                        }
-                    );
-                });
-                this.eventRefs.push(leafRef);
+                        );
+                    })
+                );
                 
                 return true;
             },
@@ -492,17 +507,8 @@ export class ExplorerEventsService {
                 });
                 this.observers = [];
 
-                // 注销所有事件引用
-                this.eventRefs.forEach(ref => {
-                    try {
-                        if (ref) {
-                            this.app.workspace.offref(ref);
-                        }
-                    } catch (e) {
-                        this.logger.debug('注销事件引用时出错', { error: e });
-                    }
-                });
-                this.eventRefs = [];
+                // 注：Obsidian的插件系统会自动处理通过registerEvent注册的事件引用
+                // 不再需要手动注销事件引用
                 
                 // 移除所有滚动事件监听器
                 this.scrollEventListeners.forEach(({element, listener}) => {
@@ -525,7 +531,6 @@ export class ExplorerEventsService {
                 level: ErrorLevel.ERROR,
                 details: { 
                     observersCount: this.observers.length,
-                    eventRefsCount: this.eventRefs.length,
                     scrollListenersCount: this.scrollEventListeners.length
                 },
                 userVisible: true

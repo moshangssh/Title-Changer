@@ -5,7 +5,15 @@ import { CacheManager } from '../CacheManager';
 import { TFile } from 'obsidian';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory, RegexError, ValidationError } from '../utils/Errors';
-import { convertToTitleChangerError, logErrorsWithoutThrowing, safeRegexCreation, safeRegexExecution, validateData, tryCatchWithValidation } from '../utils/ErrorHelpers';
+import { 
+    convertToTitleChangerError, 
+    logErrorsWithoutThrowing, 
+    safeRegexCreation, 
+    safeRegexExecution, 
+    validateData, 
+    tryCatchWithValidation,
+    ErrorHandler
+} from '../utils/ErrorHelpers';
 import { Logger } from '../utils/Logger';
 
 @injectable()
@@ -141,99 +149,79 @@ export class LinkTransformerService {
      * 处理 DOM 中的内部链接
      * @param element 要处理的 DOM 元素
      */
+    @ErrorHandler({
+        errorMessage: '处理内部链接失败',
+        category: ErrorCategory.UI,
+        level: ErrorLevel.ERROR
+    })
     processInternalLinks(element: HTMLElement): void {
         // 验证输入参数
-        try {
-            validateData(
-                element,
-                (el) => el instanceof HTMLElement,
-                'element必须是HTMLElement类型',
-                this.constructor.name
-            );
-        } catch (error) {
-            this.errorManager.handleError(
-                error instanceof Error ? error : new ValidationError('无效的DOM元素参数', {
-                    sourceComponent: this.constructor.name,
-                    details: { element },
-                    userVisible: false
-                }),
-                ErrorLevel.ERROR
-            );
+        validateData(
+            element,
+            (el) => el instanceof HTMLElement,
+            'element必须是HTMLElement类型',
+            this.constructor.name
+        );
+
+        if (!element || !element.querySelectorAll) {
             return;
         }
-
-        logErrorsWithoutThrowing(() => {
-            if (!element || !element.querySelectorAll) {
-                return false;
-            }
-            
-            const internalLinks = element.querySelectorAll('a.internal-link');
-            if (!internalLinks || internalLinks.length === 0) {
-                return true; // 没有链接也算成功
-            }
-            
-            internalLinks.forEach((link: Element) => {
-                logErrorsWithoutThrowing(() => {
-                    // 跳过已处理的链接
-                    if (link.hasAttribute('data-title-processed')) return true;
-                    
-                    const linkElement = link as HTMLElement;
-                    // 获取原始文件名
-                    const href = linkElement.getAttribute('href');
-                    const originalFileName = href?.replace(/^#/, '') || linkElement.getAttribute('data-href');
-                    if (!originalFileName) return true;
-                    
-                    // 获取显示标题
-                    let displayTitle = null;
-                    
-                    // 首先尝试从缓存获取
-                    const baseName = originalFileName.replace(/\.[^.]+$/, '');
-                    displayTitle = this.cacheManager.getDisplayTitle(baseName);
-                    
-                    // 如果缓存中没有，尝试处理链接文本
-                    if (!displayTitle) {
-                        const linkText = linkElement.innerText;
-                        const transformedText = this.transformLinkText(linkText);
-                        
-                        if (transformedText !== linkText) {
-                            displayTitle = transformedText;
-                        }
-                    }
-                    
-                    // 更新链接显示
-                    if (displayTitle && displayTitle !== linkElement.innerText) {
-                        linkElement.innerText = displayTitle;
-                        
-                        // 保留原始文本作为 title 属性以便悬停查看
-                        linkElement.title = originalFileName;
-                        
-                        // 标记为已处理
-                        linkElement.setAttribute('data-title-processed', 'true');
-                    }
-                    
-                    return true;
-                }, this.constructor.name, this.errorManager, this.logger, {
-                    errorMessage: '处理单个内部链接失败',
-                    category: ErrorCategory.UI,
-                    level: ErrorLevel.DEBUG,
-                    defaultValue: false,
-                    details: { 
-                        linkHref: link.getAttribute('href'),
-                        linkText: link.textContent
-                    }
-                });
-            });
-            
-            return true;
-        }, this.constructor.name, this.errorManager, this.logger, {
-            errorMessage: '处理内部链接失败',
-            category: ErrorCategory.UI,
-            level: ErrorLevel.ERROR,
-            defaultValue: false,
-            details: { 
-                element: element.tagName,
-                linkCount: element.querySelectorAll?.('a.internal-link')?.length || 0
-            }
+        
+        const internalLinks = element.querySelectorAll('a.internal-link');
+        if (!internalLinks || internalLinks.length === 0) {
+            return; // 没有链接也算成功
+        }
+        
+        internalLinks.forEach((link: Element) => {
+            this.processLink(link);
         });
+    }
+
+    /**
+     * 处理单个链接
+     * @param link 链接元素
+     */
+    @ErrorHandler({
+        errorMessage: '处理单个内部链接失败',
+        category: ErrorCategory.UI,
+        level: ErrorLevel.DEBUG
+    })
+    private processLink(link: Element): void {
+        // 跳过已处理的链接
+        if (link.hasAttribute('data-title-processed')) return;
+        
+        const linkElement = link as HTMLElement;
+        // 获取原始文件名
+        const href = linkElement.getAttribute('href');
+        const originalFileName = href?.replace(/^#/, '') || linkElement.getAttribute('data-href');
+        if (!originalFileName) return;
+        
+        // 获取显示标题
+        let displayTitle = null;
+        
+        // 首先尝试从缓存获取
+        const baseName = originalFileName.replace(/\.[^.]+$/, '');
+        displayTitle = this.cacheManager.getDisplayTitle(baseName);
+        
+        // 如果缓存中没有，尝试处理链接文本
+        if (!displayTitle) {
+            const linkText = linkElement.innerText;
+            const transformedText = this.transformLinkText(linkText);
+            
+            if (transformedText !== linkText) {
+                displayTitle = transformedText;
+            }
+        }
+        
+        // 更新链接显示
+        if (displayTitle && displayTitle !== linkElement.innerText) {
+            linkElement.innerText = displayTitle;
+            
+            // 保留原始文本作为 title 属性以便悬停查看
+            linkElement.title = originalFileName;
+            
+            // 标记为已处理
+            linkElement.setAttribute('data-title-processed', 'true');
+        }
     }
 } 

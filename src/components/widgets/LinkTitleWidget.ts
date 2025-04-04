@@ -6,10 +6,12 @@ import { Logger } from '../../utils/Logger';
 
 /**
  * 插件类型声明
+ * 注意：此处仅定义组件需要使用的插件属性
  */
 export interface TitleChangerPlugin extends Plugin {
-    errorManager?: ErrorManagerService;
-    logger?: Logger;
+    // 使用可选属性，适配主插件类
+    getErrorManager?(): ErrorManagerService;
+    getLogger?(): Logger;
 }
 
 /**
@@ -37,8 +39,8 @@ export class LinkTitleWidget extends WidgetType {
      */
     toDOM(): HTMLElement {
         // 检查是否有错误管理器和日志记录器
-        const errorManager = this.plugin?.errorManager;
-        const logger = this.plugin?.logger;
+        const errorManager = this.plugin?.getErrorManager?.();
+        const logger = this.plugin?.getLogger?.();
         
         // 如果有错误管理器和日志记录器，使用DOM助手函数
         if (errorManager && logger) {

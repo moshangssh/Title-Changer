@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { TFile, WorkspaceLeaf, View } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { IDOMSelectorService } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
@@ -6,52 +6,26 @@ import { ErrorCategory, UIError } from '../utils/Errors';
 import { tryCatchWrapper, handleSpecificErrors, convertToTitleChangerError, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
 import { Logger } from '../utils/Logger';
 import { TYPES } from '../types/Symbols';
+import { SelectorFactory, SelectorConfig } from '../config/selectors';
 
 /**
  * DOM选择器服务，用于查找和选择文件浏览器中的DOM元素
+ * 使用选择器工厂提供的配置来适应不同版本的Obsidian
  */
 @injectable()
 export class DOMSelectorService implements IDOMSelectorService {
-    private readonly standardSelectors = {
-        fileExplorer: '.nav-files-container',
-        alternativeExplorers: [
-            '.file-explorer-container',
-            '.file-tree-container',
-            '.nav-folder-children',
-            '.workspace-leaf-content[data-type="file-explorer"] .view-content'
-        ],
-        fallbackExplorers: [
-            '.nav-folder-content',
-            '.workspace-leaf[data-type="file-explorer"]',
-            '.workspace-leaf-content[data-type="file-explorer"]',
-            '.file-explorer'
-        ],
-        fileItems: [
-            '.nav-file',                     // 标准选择器
-            '.tree-item[data-path]',         // 新版Obsidian可能使用的选择器
-            '[data-path]:not(.nav-folder)',  // 任何带有data-path的非文件夹元素
-            '.tree-item:not(.nav-folder)',   // 文件树项目
-            '.is-clickable[aria-label]',     // 可点击元素
-            '.tree-item',                    // 备用选择器
-            '.nav-file-title',               // 文件标题元素
-            '.workspace-leaf-content[data-type="file-explorer"] *[data-path]' // 文件浏览器中所有带路径的元素
-        ],
-        titleElements: [
-            '.nav-file-title-content',       // 标准选择器
-            '.tree-item-inner',              // 新版可能使用的选择器
-            '.tree-item-content',            // 文件内容元素
-            '.nav-file-title',               // 文件标题容器
-            'div:not([class])',              // 无类的div可能是内容元素
-            '[data-path-inner-text]',        // 某些版本可能使用的属性
-            '[aria-label]',                  // 带标签的元素
-            'span'                           // 回退到简单元素
-        ]
-    };
-
+    private selectorConfig: SelectorConfig;
+    
     constructor(
         @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService,
-        @inject(TYPES.Logger) private logger: Logger
-    ) {}
+        @inject(TYPES.Logger) private logger: Logger,
+        @inject(TYPES.SelectorFactory) private selectorFactory: SelectorFactory,
+        @inject(TYPES.App) private app: any
+    ) {
+        // 初始化选择器配置
+        this.selectorConfig = this.selectorFactory.detectAndConfigure();
+        this.logger.debug('DOM选择器服务初始化完成', { selectors: this.selectorConfig });
+    }
 
     /**
      * 安全地查询DOM元素
@@ -105,40 +79,80 @@ export class DOMSelectorService implements IDOMSelectorService {
     }
 
     /**
+     * 尝试通过Obsidian API获取文件浏览器
+     * 如果API不可用，则回退到DOM查询
+     */
+    private getFileExplorersFromAPI(): HTMLElement[] {
+        return tryCatchWrapper(
+            () => {
+                const fileExplorers: HTMLElement[] = [];
+                
+                // 尝试使用Obsidian API找到文件浏览器
+                this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
+                    try {
+                        if (leaf.getViewState().type === 'file-explorer') {
+                            const containerEl = leaf.view.containerEl;
+                            if (containerEl && !fileExplorers.includes(containerEl)) {
+                                fileExplorers.push(containerEl);
+                            }
+                        }
+                    } catch (error) {
+                        // 忽略单个叶子的错误，继续检查其他叶子
+                        this.logger.debug('获取文件浏览器叶子时出错', { error });
+                    }
+                });
+                
+                return fileExplorers;
+            },
+            this.constructor.name,
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: '通过API获取文件浏览器时出错',
+                category: ErrorCategory.UI,
+                level: ErrorLevel.DEBUG,
+                details: {},
+                userVisible: false
+            }
+        ) || [];
+    }
+
+    /**
      * 获取文件浏览器元素
      */
     getFileExplorers(): HTMLElement[] {
         return tryCatchWrapper(
             () => {
-                const fileExplorers: HTMLElement[] = [];
+                let fileExplorers: HTMLElement[] = [];
                 
-                // 1. 查找标准的文件浏览器容器
-                const standardExplorers = this.safeQuerySelector<HTMLElement>(
-                    document,
-                    this.standardSelectors.fileExplorer
-                );
-                fileExplorers.push(...standardExplorers);
+                // 首先尝试使用Obsidian API
+                fileExplorers = this.getFileExplorersFromAPI();
                 
-                // 2. 查找可能的替代文件浏览器
-                const alternativeExplorers = this.safeQuerySelector<HTMLElement>(
-                    document,
-                    this.standardSelectors.alternativeExplorers.join(', '),
-                    true
-                );
-                alternativeExplorers.forEach(explorer => {
-                    if (!fileExplorers.includes(explorer)) {
-                        fileExplorers.push(explorer);
-                    }
-                });
-                
-                // 3. 作为最后的尝试，查找任何可能包含文件项的容器
+                // 如果API方法失败，回退到DOM选择器
                 if (fileExplorers.length === 0) {
-                    const fallbackExplorers = this.safeQuerySelector<HTMLElement>(
+                    // 使用主选择器
+                    fileExplorers = this.safeQuerySelector<HTMLElement>(
                         document,
-                        this.standardSelectors.fallbackExplorers.join(', '),
-                        true
+                        this.selectorConfig.fileExplorer.primary
                     );
-                    fileExplorers.push(...fallbackExplorers);
+                    
+                    // 如果主选择器没有找到，尝试替代选择器
+                    if (fileExplorers.length === 0) {
+                        fileExplorers = this.safeQuerySelector<HTMLElement>(
+                            document,
+                            this.selectorConfig.fileExplorer.alternatives.join(', '),
+                            true
+                        );
+                    }
+                    
+                    // 如果替代选择器也没有找到，尝试回退选择器
+                    if (fileExplorers.length === 0) {
+                        fileExplorers = this.safeQuerySelector<HTMLElement>(
+                            document,
+                            this.selectorConfig.fileExplorer.fallbacks.join(', '),
+                            true
+                        );
+                    }
                 }
                 
                 return fileExplorers;
@@ -150,7 +164,7 @@ export class DOMSelectorService implements IDOMSelectorService {
                 errorMessage: '获取文件浏览器时出错',
                 category: ErrorCategory.UI,
                 level: ErrorLevel.WARNING,
-                details: { selectors: this.standardSelectors },
+                details: { selectors: this.selectorConfig.fileExplorer },
                 userVisible: false
             }
         ) || [];
@@ -162,55 +176,32 @@ export class DOMSelectorService implements IDOMSelectorService {
     getFileItems(explorer: HTMLElement): HTMLElement[] {
         return tryCatchWrapper(
             () => {
-                // 尝试标准选择器集合
-                for (const selector of this.standardSelectors.fileItems) {
-                    const items = this.safeQuerySelector<HTMLElement>(explorer, selector, true);
-                    if (items.length > 0) {
-                        return items;
-                    }
-                }
-                
-                // 如果标准方法失败，尝试查找任何可能的文件项
-                // 检查具有特定特征的元素：有文本内容、有data属性、可点击等
-                const allElements = this.safeQuerySelector<HTMLElement>(explorer, '*', true);
-                const potentialFileItems = allElements.filter(el => 
-                    logErrorsWithoutThrowing(
-                        () => {
-                            // 检查是否有data-path属性
-                            if (el.hasAttribute('data-path')) return true;
-                            
-                            // 检查是否有内部文本和可点击特性
-                            if (el.textContent?.trim() && 
-                                (el.classList.contains('is-clickable') || 
-                                el.querySelector('.is-clickable'))) {
-                                return true;
-                            }
-                            
-                            // 检查是否像文件项的一般特征
-                            const hasFileExtension = el.textContent?.includes('.md') || 
-                                                el.textContent?.includes('.txt');
-                            const isTreeItem = el.classList.contains('tree-item') || 
-                                            el.classList.contains('nav-file');
-                            
-                            return hasFileExtension || isTreeItem;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '过滤文件项元素时出错',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.DEBUG,
-                            defaultValue: false
-                        }
-                    )
+                // 尝试主选择器
+                let items = this.safeQuerySelector<HTMLElement>(
+                    explorer, 
+                    this.selectorConfig.fileItems.primary, 
+                    true
                 );
                 
-                if (potentialFileItems.length > 0) {
-                    return potentialFileItems;
+                // 如果主选择器没有找到，尝试替代选择器
+                if (items.length === 0) {
+                    items = this.safeQuerySelector<HTMLElement>(
+                        explorer,
+                        this.selectorConfig.fileItems.alternatives.join(', '),
+                        true
+                    );
                 }
                 
-                return [];
+                // 如果替代选择器也没有找到，尝试回退选择器
+                if (items.length === 0) {
+                    items = this.safeQuerySelector<HTMLElement>(
+                        explorer,
+                        this.selectorConfig.fileItems.fallbacks.join(', '),
+                        true
+                    );
+                }
+                
+                return items;
             },
             this.constructor.name,
             this.errorManager,
@@ -219,7 +210,7 @@ export class DOMSelectorService implements IDOMSelectorService {
                 errorMessage: '获取文件项时出错',
                 category: ErrorCategory.UI,
                 level: ErrorLevel.WARNING,
-                details: { explorerElement: explorer.tagName },
+                details: { explorerElement: explorer.tagName, selectors: this.selectorConfig.fileItems },
                 userVisible: false
             }
         ) || [];
@@ -249,8 +240,7 @@ export class DOMSelectorService implements IDOMSelectorService {
                             errorMessage: '过滤文本元素时出错',
                             category: ErrorCategory.UI,
                             level: ErrorLevel.DEBUG,
-                            defaultValue: false,
-                            details: { element: (el as Element).tagName }
+                            defaultValue: false
                         }
                     )
                 );
@@ -274,28 +264,39 @@ export class DOMSelectorService implements IDOMSelectorService {
     getTitleElement(fileItem: HTMLElement): Element | null {
         return tryCatchWrapper(
             () => {
-                // 首先通过标准选择器尝试
-                for (const selector of this.standardSelectors.titleElements) {
-                    const elements = this.safeQuerySelector<Element>(fileItem, selector);
-                    if (elements.length > 0) {
-                        return elements[0];
+                // 首先通过主选择器尝试
+                let titleElement = this.safeQuerySelector<Element>(
+                    fileItem, 
+                    this.selectorConfig.titleElements.primary
+                )[0];
+                
+                // 如果主选择器没有找到，尝试替代选择器
+                if (!titleElement) {
+                    for (const selector of this.selectorConfig.titleElements.alternatives) {
+                        const elements = this.safeQuerySelector<Element>(fileItem, selector);
+                        if (elements.length > 0) {
+                            titleElement = elements[0];
+                            break;
+                        }
                     }
                 }
                 
-                // 如果上面的方法没找到，尝试检查所有子元素
-                const allChildElements = fileItem.querySelectorAll('*');
-                for (const child of Array.from(allChildElements)) {
-                    // 检查是否有文本内容的元素
-                    if (child.textContent && 
-                        child.textContent.trim() && 
-                        !child.children.length &&
-                        !(child instanceof HTMLInputElement) &&
-                        !(child instanceof HTMLButtonElement)) {
-                        return child;
+                // 如果标准选择器没找到，尝试查找有文本内容的子元素
+                if (!titleElement) {
+                    const allChildElements = fileItem.querySelectorAll('*');
+                    for (const child of Array.from(allChildElements)) {
+                        if (child.textContent && 
+                            child.textContent.trim() && 
+                            !child.children.length &&
+                            !(child instanceof HTMLInputElement) &&
+                            !(child instanceof HTMLButtonElement)) {
+                            titleElement = child;
+                            break;
+                        }
                     }
                 }
                 
-                return null;
+                return titleElement || null;
             },
             this.constructor.name,
             this.errorManager,
@@ -304,7 +305,7 @@ export class DOMSelectorService implements IDOMSelectorService {
                 errorMessage: '获取标题元素时出错',
                 category: ErrorCategory.UI,
                 level: ErrorLevel.WARNING,
-                details: { fileItemElement: fileItem.tagName },
+                details: { fileItemElement: fileItem.tagName, selectors: this.selectorConfig.titleElements },
                 userVisible: false
             }
         );
@@ -316,17 +317,19 @@ export class DOMSelectorService implements IDOMSelectorService {
     getFilePath(fileItem: HTMLElement): string | null {
         return tryCatchWrapper(
             () => {
+                const pathAttr = this.selectorConfig.attributes.path;
+                
                 // 1. 直接从当前元素获取
-                let filePath = this.safeGetAttribute(fileItem, 'data-path');
+                let filePath = this.safeGetAttribute(fileItem, pathAttr);
                 
                 // 2. 如果当前元素没有，尝试从父元素获取
                 if (!filePath) {
-                    filePath = this.getFilePathFromParent(fileItem);
+                    filePath = this.getFilePathFromParent(fileItem, pathAttr);
                 }
                 
                 // 3. 尝试从子元素获取
                 if (!filePath) {
-                    filePath = this.getFilePathFromChild(fileItem);
+                    filePath = this.getFilePathFromChild(fileItem, pathAttr);
                 }
                 
                 // 4. 尝试从链接元素获取
@@ -336,8 +339,8 @@ export class DOMSelectorService implements IDOMSelectorService {
                 
                 // 5. 尝试使用title或aria-label属性
                 if (!filePath) {
-                    filePath = this.safeGetAttribute(fileItem, 'title') || 
-                              this.safeGetAttribute(fileItem, 'aria-label');
+                    filePath = this.safeGetAttribute(fileItem, this.selectorConfig.attributes.title) || 
+                              this.safeGetAttribute(fileItem, this.selectorConfig.attributes.ariaLabel);
                 }
                 
                 return filePath;
@@ -358,7 +361,7 @@ export class DOMSelectorService implements IDOMSelectorService {
     /**
      * 从父元素获取文件路径
      */
-    private getFilePathFromParent(element: HTMLElement): string | null {
+    private getFilePathFromParent(element: HTMLElement, pathAttr: string): string | null {
         return tryCatchWrapper(
             () => {
                 let parent = element.parentElement;
@@ -366,7 +369,7 @@ export class DOMSelectorService implements IDOMSelectorService {
                 const maxSearchDepth = 3;
                 
                 while (parent && searchDepth < maxSearchDepth) {
-                    const path = this.safeGetAttribute(parent, 'data-path');
+                    const path = this.safeGetAttribute(parent, pathAttr);
                     if (path) return path;
                     parent = parent.parentElement;
                     searchDepth++;
@@ -390,11 +393,11 @@ export class DOMSelectorService implements IDOMSelectorService {
     /**
      * 从子元素获取文件路径
      */
-    private getFilePathFromChild(element: HTMLElement): string | null {
+    private getFilePathFromChild(element: HTMLElement, pathAttr: string): string | null {
         return tryCatchWrapper(
             () => {
-                const childWithPath = this.safeQuerySelector<Element>(element, '[data-path]')[0];
-                return this.safeGetAttribute(childWithPath, 'data-path');
+                const childWithPath = this.safeQuerySelector<Element>(element, `[${pathAttr}]`)[0];
+                return this.safeGetAttribute(childWithPath, pathAttr);
             },
             this.constructor.name,
             this.errorManager,
@@ -416,7 +419,7 @@ export class DOMSelectorService implements IDOMSelectorService {
         return tryCatchWrapper(
             () => {
                 const linkEl = this.safeQuerySelector<Element>(element, 'a.internal-link')[0];
-                const href = this.safeGetAttribute(linkEl, 'href');
+                const href = this.safeGetAttribute(linkEl, this.selectorConfig.attributes.href);
                 return href ? decodeURIComponent(href).replace(/^\//, '') : null;
             },
             this.constructor.name,
@@ -430,5 +433,14 @@ export class DOMSelectorService implements IDOMSelectorService {
                 userVisible: false
             }
         );
+    }
+
+    /**
+     * 刷新选择器配置
+     * 在Obsidian更新或UI变化时调用
+     */
+    refreshSelectors(): void {
+        this.logger.debug('刷新选择器配置');
+        this.selectorConfig = this.selectorFactory.refreshSelectors();
     }
 } 

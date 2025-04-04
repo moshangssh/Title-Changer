@@ -97,6 +97,11 @@ export interface IDOMSelectorService {
     getTextElements(container: HTMLElement): Element[];
     getTitleElement(fileItem: HTMLElement): Element | null;
     getFilePath(fileItem: HTMLElement): string | null;
+    /**
+     * 刷新选择器配置
+     * 在Obsidian更新或UI变化时调用
+     */
+    refreshSelectors(): void;
 }
 
 /**

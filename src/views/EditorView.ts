@@ -21,6 +21,12 @@ import { AbstractView } from './base/abstract-view';
 import { TitleService } from '../services/TitleService';
 import { FileService } from '../services/file.service';
 import { UpdateScheduler } from '../services/UpdateSchedulerService';
+import { 
+    getEditorView, 
+    getEditorContainer, 
+    refreshEditorView
+} from '../utils/EditorUtils';
+import { createLinkTitleExtension } from '../components/extensions/LinkTitleExtension';
 
 /**
  * 编辑视图组件，负责处理编辑器中的双链标题显示
@@ -154,46 +160,41 @@ export class EditorLinkView extends AbstractView {
                 if (leaf.view.getViewType() === 'markdown') {
                     try {
                         // 获取编辑器DOM容器
-                        if (leaf.view instanceof MarkdownView) {
-                            // 获取编辑器DOM元素
-                            const editorEl = (leaf.view.editor as any).containerEl || leaf.view.contentEl;
+                        const editorEl = getEditorContainer(leaf) || (leaf.view as MarkdownView).contentEl;
+                        
+                        // 查找所有可能的Wiki链接元素
+                        const wikiLinkElements = editorEl.querySelectorAll('.cm-hmd-internal-link');
+                        
+                        // 对每个链接元素应用自定义标题
+                        Array.from(wikiLinkElements).forEach((el) => {
+                            const htmlEl = el as HTMLElement;
+                            // 尝试获取原始文件名
+                            let linkText = htmlEl.textContent;
+                            if (!linkText) return;
                             
-                            // 查找所有可能的Wiki链接元素
-                            const wikiLinkElements = editorEl.querySelectorAll('.cm-hmd-internal-link');
-                            
-                            // 对每个链接元素应用自定义标题
-                            wikiLinkElements.forEach((el: HTMLElement) => {
-                                // 尝试获取原始文件名
-                                let linkText = el.textContent;
-                                if (!linkText) return;
-                                
-                                // 移除可能的管道符及后面的内容
-                                if (linkText.includes('|')) {
-                                    linkText = linkText.split('|')[0].trim();
-                                }
-                                
-                                // 获取自定义标题
-                                const displayTitle = this.titleService.getDisplayTitle(linkText);
-                                
-                                // 只有当有自定义标题且与原始文件名不同时才替换
-                                if (displayTitle && displayTitle !== linkText) {
-                                    // 保存原始文件名
-                                    el.setAttribute('data-linktext', linkText);
-                                    
-                                    // 替换显示文本为自定义标题
-                                    el.textContent = displayTitle;
-                                    
-                                    // 添加我们的自定义类
-                                    el.classList.add('title-changer-link');
-                                }
-                            });
-                            
-                            // 强制更新编辑器视图
-                            const editorView = this.getEditorFromLeaf(leaf);
-                            if (editorView) {
-                                editorView.requestMeasure();
+                            // 移除可能的管道符及后面的内容
+                            if (linkText.includes('|')) {
+                                linkText = linkText.split('|')[0].trim();
                             }
-                        }
+                            
+                            // 获取自定义标题
+                            const displayTitle = this.titleService.getDisplayTitle(linkText);
+                            
+                            // 只有当有自定义标题且与原始文件名不同时才替换
+                            if (displayTitle && displayTitle !== linkText) {
+                                // 保存原始文件名
+                                htmlEl.setAttribute('data-linktext', linkText);
+                                
+                                // 替换显示文本为自定义标题
+                                htmlEl.textContent = displayTitle;
+                                
+                                // 添加我们的自定义类
+                                htmlEl.classList.add('title-changer-link');
+                            }
+                        });
+                        
+                        // 强制更新编辑器视图
+                        refreshEditorView(leaf);
                     } catch (e) {
                         this.safeOperation(
                             () => {},
@@ -234,37 +235,32 @@ export class EditorLinkView extends AbstractView {
                 if (leaf.view.getViewType() === 'markdown') {
                     try {
                         // 获取编辑器DOM容器
-                        if (leaf.view instanceof MarkdownView) {
-                            // 获取编辑器DOM元素
-                            const editorEl = (leaf.view.editor as any).containerEl || leaf.view.contentEl;
-                            
-                            // 查找所有被我们的插件处理过的链接元素
-                            const linkElements = editorEl.querySelectorAll('.title-changer-link');
-                            
-                            // 对每个链接元素恢复原始显示
-                            linkElements.forEach((el: HTMLElement) => {
-                                const originalFileName = el.getAttribute('data-linktext');
-                                if (originalFileName) {
-                                    // 替换显示文本为原始文件名
-                                    el.textContent = originalFileName;
-                                    
-                                    // 移除我们的自定义类，但保留Obsidian的原生链接类
-                                    el.classList.remove('title-changer-link');
-                                }
-                            });
-                            
-                            // 强制更新编辑器视图
-                            const editorView = this.getEditorFromLeaf(leaf);
-                            if (editorView) {
-                                editorView.requestMeasure();
+                        const editorEl = getEditorContainer(leaf) || (leaf.view as MarkdownView).contentEl;
+                        
+                        // 查找所有被我们的插件处理过的链接元素
+                        const linkElements = editorEl.querySelectorAll('.title-changer-link');
+                        
+                        // 对每个链接元素恢复原始显示
+                        Array.from(linkElements).forEach((el) => {
+                            const htmlEl = el as HTMLElement;
+                            const originalFileName = htmlEl.getAttribute('data-linktext');
+                            if (originalFileName) {
+                                // 替换显示文本为原始文件名
+                                htmlEl.textContent = originalFileName;
+                                
+                                // 移除我们的自定义类，但保留Obsidian的原生链接类
+                                htmlEl.classList.remove('title-changer-link');
                             }
-                            
-                            // 通知Obsidian编辑器内容可能已更改
-                            try {
-                                leaf.view.editor.refresh();
-                            } catch (err) {
-                                // 忽略刷新错误
-                            }
+                        });
+                        
+                        // 强制更新编辑器视图
+                        refreshEditorView(leaf);
+                        
+                        // 通知Obsidian编辑器内容可能已更改
+                        try {
+                            (leaf.view as MarkdownView).editor.refresh();
+                        } catch (err) {
+                            // 忽略刷新错误
                         }
                     } catch (e) {
                         this.safeOperation(
@@ -288,10 +284,7 @@ export class EditorLinkView extends AbstractView {
      * 辅助方法：从叶子获取编辑器实例
      */
     private getEditorFromLeaf(leaf: WorkspaceLeaf): EditorView | null {
-        if (leaf.view instanceof MarkdownView) {
-            return (leaf.view.editor as any).cm;
-        }
-        return null;
+        return getEditorView(leaf);
     }
 
     /**
@@ -305,121 +298,30 @@ export class EditorLinkView extends AbstractView {
             return;
         }
         
-        const self = this;
-        // 创建设置变更注解
-        const settingsChangedAnnotation = Annotation.define<null>();
-
-        // 创建插件
-        const linkTitlePlugin = ViewPlugin.fromClass(
-            class {
-                decorations: DecorationSet;
-
-                constructor(view: EditorView) {
-                    this.decorations = this.buildDecorations(view);
-                }
-
-                update(update: ViewUpdate) {
-                    handleEditorOperation(
-                        () => {
-                            if (update.docChanged || 
-                                update.viewportChanged || 
-                                update.transactions.some(tr => tr.annotation(settingsChangedAnnotation))) {
-                                this.decorations = this.buildDecorations(update.view);
-                            }
-                        },
-                        'EditorLinkView',
-                        self.errorManager,
-                        self.logger,
-                        {
-                            errorMessage: '更新编辑器装饰失败',
-                            userVisible: false,
-                            details: { location: 'update' }
-                        }
-                    );
-                }
-
-                buildDecorations(view: EditorView): DecorationSet {
-                    return tryCatchWithValidation(
-                        () => {
-                            const builder = new RangeSetBuilder<Decoration>();
-                            const { doc } = view.state;
-                            const { from, to } = view.viewport;
-                            
-                            // 添加缓冲区以提高滚动性能
-                            const bufferSize = 1000;
-                            const processFrom = Math.max(0, from - bufferSize);
-                            const processTo = Math.min(doc.length, to + bufferSize);
-                            
-                            let pos = processFrom;
-                            while (pos <= processTo) {
-                                const line = doc.lineAt(pos);
-                                this.processLine(line.text, line.from, builder);
-                                pos = line.to + 1;
-                            }
-                            
-                            return builder.finish();
-                        },
-                        (result) => result !== null && result !== undefined,
-                        'EditorLinkView',
-                        self.errorManager,
-                        self.logger,
-                        {
-                            errorMessage: '构建装饰失败',
-                            validationErrorMessage: '装饰构建结果无效',
-                            category: ErrorCategory.DECORATION,
-                            level: ErrorLevel.ERROR,
-                            details: { location: 'buildDecorations' }
-                        }
-                    ) || Decoration.none;
-                }
-                
-                /**
-                 * 处理单行内容中的Wiki链接
-                 */
-                processLine(text: string, lineStart: number, builder: RangeSetBuilder<Decoration>): void {
-                    // 使用新的工具函数提取Wiki链接
-                    const wikiLinks = extractWikiLinks(text, lineStart);
-                    
-                    for (const link of wikiLinks) {
-                        // 如果已有显示文本则跳过
-                        if (!shouldReplaceTitle(link)) continue;
-                        
-                        tryCatchWrapper(
-                            () => {
-                                // 使用TitleService获取显示标题
-                                const displayTitle = self.titleService.getDisplayTitle(link.fileName);
-                                
-                                if (displayTitle && displayTitle !== link.fileName) {
-                                    builder.add(
-                                        link.start + 2, // 跳过 [[ 
-                                        link.start + 2 + link.fileName.length,
-                                        Decoration.replace({
-                                            widget: new LinkTitleWidget(displayTitle, link.fileName, self.plugin)
-                                        })
-                                    );
-                                }
-                            },
-                            'EditorLinkView',
-                            self.errorManager,
-                            self.logger,
-                            {
-                                errorMessage: '处理链接失败',
-                                category: ErrorCategory.DECORATION,
-                                level: ErrorLevel.WARNING,
-                                userVisible: false,
-                                details: { location: 'processLine', fileName: link.fileName }
-                            }
-                        );
-                    }
-                }
-            },
-            {
-                decorations: v => v.decorations
-            }
+        // 创建链接标题扩展
+        const linkTitleExtension = createLinkTitleExtension(
+            this.plugin, 
+            this.titleService, 
+            this.errorManager, 
+            this.logger
         );
-
+        
         // 注册扩展
-        const symbol = this.extensionManager.registerExtension(linkTitlePlugin);
+        const symbol = this.extensionManager.registerExtension(linkTitleExtension);
         this.registeredExtensions.push(symbol);
+    }
+
+    /**
+     * 处理内部链接，创建带有自定义标题的部件
+     * @param fileName 文件名
+     * @param displayTitle 显示标题
+     * @returns 链接标题小部件
+     */
+    private createLinkWidget(fileName: string, displayTitle: string): LinkTitleWidget {
+        return new LinkTitleWidget(
+            displayTitle,
+            fileName,
+            this.plugin
+        );
     }
 } 

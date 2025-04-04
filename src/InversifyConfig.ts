@@ -21,6 +21,8 @@ import { LinkTransformerService } from "./services/LinkTransformerService";
 import { FileService } from "./services/file.service";
 import { TitleService } from "./services/TitleService";
 import { UpdateScheduler } from "./services/UpdateSchedulerService";
+import { SelectorFactory } from "./config/selectors";
+import { TitleStateService } from "./services/TitleStateService";
 
 /**
  * 创建并配置IOC容器
@@ -54,7 +56,11 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.LinkTransformerService).to(LinkTransformerService).inSingletonScope();
     container.bind(TYPES.FileService).to(FileService).inSingletonScope();
     container.bind(TYPES.TitleService).to(TitleService).inSingletonScope();
+    container.bind(TYPES.TitleStateService).to(TitleStateService).inSingletonScope();
     container.bind(TYPES.UpdateScheduler).to(UpdateScheduler).inSingletonScope();
+    
+    // 注册配置工厂
+    container.bind(TYPES.SelectorFactory).to(SelectorFactory).inSingletonScope();
     
     return container;
 } 

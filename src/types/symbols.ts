@@ -27,5 +27,9 @@ export const TYPES = {
   // 新增服务
   FileService: Symbol.for("FileService"),
   TitleService: Symbol.for("TitleService"),
+  TitleStateService: Symbol.for("TitleStateService"),
   UpdateScheduler: Symbol.for("UpdateScheduler"),
+  
+  // 配置工厂
+  SelectorFactory: Symbol.for("SelectorFactory"),
 }; 

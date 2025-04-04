@@ -13,6 +13,9 @@ import { DOMSelectorService } from './services/DomSelectorService';
 import { ExplorerStateService } from './services/explorer-state.service';
 import { ExplorerEventsService } from './services/ExplorerEventsService';
 import { LinkTransformerService } from './services/LinkTransformerService';
+import { UpdateScheduler } from './services/UpdateSchedulerService';
+import { ErrorManagerService } from './services/ErrorManagerService';
+import { TitleStateService } from './services/TitleStateService';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;
@@ -20,20 +23,28 @@ export class TitleChangerPlugin extends Plugin {
     private viewManager!: ViewManager;
     private linkTransformer!: LinkTransformerService;
     private explorerView!: ExplorerView;
+    private logger!: Logger;
+    private titleStateService!: TitleStateService;
 
     async onload() {
-        console.log('加载 Title Changer 插件');
-
         // 加载设置
         await this.loadSettings();
 
         // 初始化 IoC 容器
         this.initializeContainer();
+        
+        // 获取Logger服务
+        this.logger = this.container.get<Logger>(TYPES.Logger);
+        this.logger.info('加载 Title Changer 插件');
 
         // 获取服务实例
         this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
         this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
         this.linkTransformer.setSettings(this.settings);
+        
+        // 初始化标题状态服务
+        this.titleStateService = this.container.get<TitleStateService>(TYPES.TitleStateService);
+        this.titleStateService.initialize();
 
         // 初始化视图
         if (this.container.isBound(TYPES.ExplorerView)) {
@@ -71,15 +82,16 @@ export class TitleChangerPlugin extends Plugin {
             // 处理渲染后的Markdown内容中的内部链接
             this.linkTransformer.processInternalLinks(element);
             
-            // 延迟处理以确保动态加载的内容也能正确显示
-            setTimeout(() => {
+            // 使用requestAnimationFrame替代setTimeout进行延迟处理
+            // 确保动态加载的内容也能正确显示
+            requestAnimationFrame(() => {
                 this.linkTransformer.processInternalLinks(element);
-            }, 200);
+            });
         });
     }
 
     onunload() {
-        console.log('卸载 Title Changer 插件');
+        this.logger.info('卸载 Title Changer 插件');
         
         // 卸载视图管理器
         if (this.viewManager) {
@@ -89,6 +101,17 @@ export class TitleChangerPlugin extends Plugin {
         // 卸载文件浏览器视图
         if (this.explorerView) {
             this.explorerView.unload();
+        }
+        
+        // 卸载标题状态服务
+        if (this.titleStateService) {
+            this.titleStateService.unload();
+        }
+        
+        // 清理所有计时器
+        const updateScheduler = this.container.get<UpdateScheduler>(TYPES.UpdateScheduler);
+        if (updateScheduler) {
+            updateScheduler.clearAll();
         }
 
         // 释放容器资源
@@ -133,5 +156,21 @@ export class TitleChangerPlugin extends Plugin {
      */
     getViewManager(): ViewManager {
         return this.viewManager;
+    }
+
+    /**
+     * 获取日志记录器实例
+     * @returns 日志记录器实例
+     */
+    getLogger(): Logger {
+        return this.logger;
+    }
+
+    /**
+     * 获取错误管理器实例
+     * @returns 错误管理器实例
+     */
+    getErrorManager(): ErrorManagerService {
+        return this.container.get<ErrorManagerService>(TYPES.ErrorManager);
     }
 } 
