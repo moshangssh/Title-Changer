@@ -19,6 +19,7 @@ export class TitleChangerPlugin extends Plugin {
     private container!: Container;
     private viewManager!: ViewManager;
     private linkTransformer!: LinkTransformerService;
+    private explorerView!: ExplorerView;
 
     async onload() {
         console.log('加载 Title Changer 插件');
@@ -34,8 +35,24 @@ export class TitleChangerPlugin extends Plugin {
         this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
         this.linkTransformer.setSettings(this.settings);
 
+        // 初始化视图
+        if (this.container.isBound(TYPES.ExplorerView)) {
+            this.explorerView = this.container.get<ExplorerView>(TYPES.ExplorerView);
+            this.explorerView.initialize();
+        }
+
         // 添加设置选项卡
         this.addSettingTab(new TitleChangerSettingTab(this.app, this));
+
+        // 根据设置初始化ReadingView状态
+        if (!this.settings.enableReadingView) {
+            this.viewManager.disableView('reading');
+        }
+        
+        // 根据设置初始化EditorLinkView状态
+        if (!this.settings.enableEditorLinkView) {
+            this.viewManager.disableView('editor');
+        }
 
         // 初始化视图管理器
         this.viewManager.initialize();
@@ -68,6 +85,16 @@ export class TitleChangerPlugin extends Plugin {
         if (this.viewManager) {
             this.viewManager.unload();
         }
+
+        // 卸载文件浏览器视图
+        if (this.explorerView) {
+            this.explorerView.unload();
+        }
+
+        // 释放容器资源
+        if (this.container) {
+            this.container.unbindAll();
+        }
     }
 
     async loadSettings() {
@@ -88,5 +115,23 @@ export class TitleChangerPlugin extends Plugin {
 
     private initializeContainer(): void {
         this.container = createContainer(this);
+    }
+
+    /**
+     * 刷新文件浏览器视图
+     * 用于在启用/禁用插件时立即更新显示
+     */
+    refreshExplorerView(): void {
+        if (this.explorerView) {
+            this.explorerView.immediateUpdate();
+        }
+    }
+
+    /**
+     * 获取视图管理器实例
+     * @returns 视图管理器实例
+     */
+    getViewManager(): ViewManager {
+        return this.viewManager;
     }
 } 

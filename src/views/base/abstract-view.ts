@@ -13,6 +13,11 @@ import { ErrorCategory } from '../../utils/Errors';
 @injectable()
 export abstract class AbstractView {
     /**
+     * 视图启用状态标志
+     */
+    protected enabled: boolean = true;
+
+    /**
      * 构造函数
      * @param plugin TitleChanger插件实例
      * @param logger 日志服务
@@ -41,6 +46,61 @@ export abstract class AbstractView {
      * 子类必须实现此方法以进行清理工作
      */
     abstract unload(): void;
+    
+    /**
+     * 检查视图是否启用
+     * @returns 如果视图启用则返回true，否则返回false
+     */
+    public isEnabled(): boolean {
+        return this.enabled;
+    }
+
+    /**
+     * 启用视图
+     */
+    public enable(): void {
+        if (!this.enabled) {
+            this.enabled = true;
+            this.onEnable();
+        }
+    }
+
+    /**
+     * 禁用视图
+     */
+    public disable(): void {
+        if (this.enabled) {
+            this.enabled = false;
+            this.onDisable();
+        }
+    }
+
+    /**
+     * 切换视图启用状态
+     */
+    public toggle(): void {
+        if (this.enabled) {
+            this.disable();
+        } else {
+            this.enable();
+        }
+    }
+
+    /**
+     * 当视图被启用时调用
+     * 子类可重写此方法以提供特定行为
+     */
+    protected onEnable(): void {
+        this.logInfo(`${this.constructor.name} 已启用`);
+    }
+
+    /**
+     * 当视图被禁用时调用
+     * 子类可重写此方法以提供特定行为
+     */
+    protected onDisable(): void {
+        this.logInfo(`${this.constructor.name} 已禁用`);
+    }
     
     /**
      * 记录信息日志

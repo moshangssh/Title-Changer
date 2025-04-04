@@ -45,6 +45,27 @@ export interface IViewManager {
     unload(): void;
     updateAllViews(): void;
     onSettingsChanged(): void;
+    /**
+     * 启用指定视图
+     * @param viewId 视图ID标识符
+     */
+    enableView(viewId: string): void;
+    /**
+     * 禁用指定视图
+     * @param viewId 视图ID标识符
+     */
+    disableView(viewId: string): void;
+    /**
+     * 切换指定视图的启用状态
+     * @param viewId 视图ID标识符
+     */
+    toggleView(viewId: string): void;
+    /**
+     * 获取视图的启用状态
+     * @param viewId 视图ID标识符
+     * @returns 如果视图启用则返回true，否则返回false
+     */
+    isViewEnabled(viewId: string): boolean;
 }
 
 /**

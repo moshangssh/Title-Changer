@@ -101,7 +101,8 @@ export class FileHandlerService {
     processFileItem(
         fileItem: HTMLElement,
         cacheManager: CacheManager,
-        stateService: ExplorerStateService
+        stateService: ExplorerStateService,
+        enabled: boolean = true
     ): void {
         handleDataOperation(
             () => {
@@ -126,6 +127,16 @@ export class FileHandlerService {
                 // 保存原始显示文本
                 const originalText = this.safeGetTextContent(titleEl) || file.basename;
                 stateService.saveOriginalText(titleEl, originalText);
+
+                // 如果禁用插件，则恢复原始文件名
+                if (!enabled) {
+                    // 恢复原始文件名
+                    const savedText = stateService.getOriginalText(titleEl);
+                    if (savedText && this.safeGetTextContent(titleEl) !== savedText) {
+                        this.safeSetTextContent(titleEl, savedText);
+                    }
+                    return true;
+                }
 
                 // 获取显示标题
                 const displayTitle = cacheManager.processFile(file);
@@ -160,7 +171,8 @@ export class FileHandlerService {
     processTextElements(
         elements: Element[],
         cacheManager: CacheManager,
-        stateService: ExplorerStateService
+        stateService: ExplorerStateService,
+        enabled: boolean = true
     ): void {
         // 验证输入参数
         validateData(elements, 
@@ -180,6 +192,15 @@ export class FileHandlerService {
 
                     // 保存原始文本
                     stateService.saveOriginalText(element, text);
+
+                    // 如果禁用插件，则恢复原始文件名
+                    if (!enabled) {
+                        const savedText = stateService.getOriginalText(element);
+                        if (savedText && this.safeGetTextContent(element) !== savedText) {
+                            this.safeSetTextContent(element, savedText);
+                        }
+                        return true;
+                    }
 
                     // 获取显示标题
                     const displayTitle = cacheManager.processFile(matchingFile);

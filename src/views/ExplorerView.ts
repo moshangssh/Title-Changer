@@ -178,6 +178,7 @@ export class ExplorerView extends AbstractView {
         measurePerformance(
             () => {
                 const fileExplorers = this.domSelector.getFileExplorers();
+                const isEnabled = this.plugin.settings.enabled;
                 
                 fileExplorers.forEach(explorer => {
                     this.safeOperation(
@@ -187,17 +188,17 @@ export class ExplorerView extends AbstractView {
                             if (fileItems.length === 0) {
                                 // 如果没有找到文件项，尝试处理所有文本元素
                                 const textElements = this.domSelector.getTextElements(explorer);
-                                this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService);
+                                this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService, isEnabled);
                             } else {
                                 // 处理找到的文件项
                                 fileItems.forEach(fileItem => {
-                                    this.fileHandler.processFileItem(fileItem, this.cacheManager, this.stateService);
+                                    this.fileHandler.processFileItem(fileItem, this.cacheManager, this.stateService, isEnabled);
                                 });
                                 
                                 // 为防止某些文件项未被正确识别，也处理文本元素
                                 if (fileItems.length < 3) { // 如果文件项很少，可能是识别有问题
                                     const textElements = this.domSelector.getTextElements(explorer);
-                                    this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService);
+                                    this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService, isEnabled);
                                 }
                             }
                         },

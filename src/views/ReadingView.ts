@@ -131,6 +131,12 @@ export class ReadingView extends AbstractView {
      * 更新阅读视图中的链接标题
      */
     updateView(): void {
+        // 检查视图是否启用，如果未启用则直接返回
+        if (!this.enabled) {
+            this.logDebug(`[${ReadingView.VIEW_ID}] 视图已禁用，跳过更新`);
+            return;
+        }
+        
         this.logDebug(`[${ReadingView.VIEW_ID}] 正在更新视图...`);
         
         // 使用更新调度器进行防抖处理
@@ -259,6 +265,94 @@ export class ReadingView extends AbstractView {
             },
             'ReadingView',
             '处理阅读视图链接时发生错误',
+            ErrorCategory.UI,
+            ErrorLevel.ERROR
+        );
+    }
+
+    /**
+     * 重写onEnable方法，在启用时立即刷新视图
+     */
+    protected override onEnable(): void {
+        super.onEnable();
+        this.logInfo(`[${ReadingView.VIEW_ID}] 视图已启用，立即刷新`);
+        
+        // 立即刷新视图以显示自定义标题
+        this.updateView();
+    }
+
+    /**
+     * 重写onDisable方法，在禁用时恢复原始文件名
+     */
+    protected override onDisable(): void {
+        super.onDisable();
+        this.logInfo(`[${ReadingView.VIEW_ID}] 视图已禁用，恢复原始文件名`);
+        
+        // 恢复原始文件名的逻辑
+        this.restoreOriginalTitles();
+    }
+
+    /**
+     * 恢复所有修改过的标题为原始文件名
+     */
+    private restoreOriginalTitles(): void {
+        this.safeOperation(
+            () => {
+                // 获取当前活动叶子
+                const activeLeaf = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                if (!activeLeaf) return;
+                
+                // 检查是否处于阅读模式
+                if (activeLeaf.getMode() !== 'preview') return;
+
+                // 获取预览模式下的DOM元素
+                const previewEl = activeLeaf.previewMode.containerEl;
+                if (!previewEl) return;
+
+                // 查找所有已处理过的链接
+                const processedLinks = querySelectorAll(
+                    previewEl,
+                    '.internal-link[data-title-processed="true"]',
+                    'ReadingView',
+                    this.errorManager,
+                    this.logger
+                );
+                
+                // 恢复原始文件名
+                processedLinks.forEach(linkEl => {
+                    logErrorsWithoutThrowing(
+                        () => {
+                            const originalFileName = getAttribute(
+                                linkEl as HTMLElement,
+                                'title',
+                                'ReadingView',
+                                this.errorManager,
+                                this.logger
+                            );
+                            
+                            if (originalFileName) {
+                                // 恢复原始文件名作为显示文本
+                                (linkEl as HTMLElement).textContent = originalFileName;
+                                
+                                // 移除已处理标记
+                                (linkEl as HTMLElement).removeAttribute('data-title-processed');
+                            }
+                        },
+                        'ReadingView',
+                        this.errorManager,
+                        this.logger,
+                        {
+                            errorMessage: '恢复原始标题失败',
+                            category: ErrorCategory.UI,
+                            level: ErrorLevel.DEBUG
+                        }
+                    );
+                });
+                
+                return true;
+            },
+            'ReadingView',
+            '恢复原始标题时发生错误',
             ErrorCategory.UI,
             ErrorLevel.ERROR
         );

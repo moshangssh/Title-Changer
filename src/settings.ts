@@ -28,6 +28,21 @@ export interface TitleChangerSettings {
      * 缓存过期时间（分钟）
      */
     cacheExpiration: number;
+
+    /**
+     * 是否启用标题变更功能
+     */
+    enabled: boolean;
+    
+    /**
+     * 是否启用阅读视图标题替换
+     */
+    enableReadingView: boolean;
+    
+    /**
+     * 是否启用编辑器视图标题替换
+     */
+    enableEditorLinkView: boolean;
 }
 
 export const DEFAULT_SETTINGS: TitleChangerSettings = {
@@ -37,7 +52,10 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     includeSubfolders: true,
     debugMode: false,
     useCache: true,
-    cacheExpiration: 60
+    cacheExpiration: 60,
+    enabled: true,
+    enableReadingView: true,
+    enableEditorLinkView: true
 };
 
 export class TitleChangerSettingTab extends PluginSettingTab {
@@ -56,17 +74,40 @@ export class TitleChangerSettingTab extends PluginSettingTab {
 
         containerEl.createEl('h2', { text: 'Title Changer 设置' });
 
+        // 全局启用设置
+        this.createGlobalSettings(containerEl);
+
         // 提取标题设置
         this.createTitleSettings(containerEl);
 
         // 文件夹限制设置
         this.createFolderSettings(containerEl);
 
+        // 视图设置
+        this.createViewSettings(containerEl);
+
         // 缓存设置
         this.createCacheSettings(containerEl);
 
         // 调试设置
         this.createDebugSettings(containerEl);
+    }
+
+    private createGlobalSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '全局设置' });
+
+        new Setting(containerEl)
+            .setName('文件游览器')
+            .setDesc('文件游览器启动状况')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.enabled = value;
+                    await this.plugin.saveSettings();
+                    
+                    // 立即应用状态变化
+                    this.plugin.refreshExplorerView();
+                }));
     }
 
     private createTitleSettings(containerEl: HTMLElement): void {
@@ -119,6 +160,54 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }));
         }
+    }
+
+    private createViewSettings(containerEl: HTMLElement): void {
+        containerEl.createEl('h3', { text: '视图设置' });
+        
+        new Setting(containerEl)
+            .setName('启用阅读视图标题替换')
+            .setDesc('在预览模式中启用内部链接的自定义标题显示')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableReadingView)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableReadingView = value;
+                    
+                    // 根据设置立即启用或禁用ReadingView
+                    const viewManager = this.plugin.getViewManager();
+                    if (viewManager) {
+                        if (value) {
+                            viewManager.enableView('reading');
+                        } else {
+                            viewManager.disableView('reading');
+                        }
+                    }
+                    
+                    await this.plugin.saveSettings();
+                })
+            );
+            
+        new Setting(containerEl)
+            .setName('启用编辑器链接视图')
+            .setDesc('控制是否在编辑器中将Wiki链接显示为自定义标题')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableEditorLinkView)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableEditorLinkView = value;
+                    
+                    // 根据开关状态启用或禁用视图
+                    const viewManager = this.plugin.getViewManager();
+                    if (viewManager) {
+                        if (value) {
+                            viewManager.enableView('editor');
+                        } else {
+                            viewManager.disableView('editor');
+                        }
+                    }
+                    
+                    await this.plugin.saveSettings();
+                })
+            );
     }
 
     private createCacheSettings(containerEl: HTMLElement): void {

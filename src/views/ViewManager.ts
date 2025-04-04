@@ -208,4 +208,121 @@ export class ViewManager implements IViewManager {
             }
         );
     }
+
+    /**
+     * 启用指定视图
+     * @param viewId 视图ID标识符
+     */
+    public enableView(viewId: string): void {
+        tryCatchWrapper(
+            () => {
+                const view = this.getViewById(viewId);
+                if (view) {
+                    view.enable();
+                    this.logger.info(`视图 ${viewId} 已启用`);
+                }
+            },
+            'ViewManager',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: `启用视图 ${viewId} 失败`,
+                category: ErrorCategory.UI,
+                level: ErrorLevel.WARNING,
+                details: { action: 'enableView', viewId }
+            }
+        );
+    }
+
+    /**
+     * 禁用指定视图
+     * @param viewId 视图ID标识符
+     */
+    public disableView(viewId: string): void {
+        tryCatchWrapper(
+            () => {
+                const view = this.getViewById(viewId);
+                if (view) {
+                    view.disable();
+                    this.logger.info(`视图 ${viewId} 已禁用`);
+                }
+            },
+            'ViewManager',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: `禁用视图 ${viewId} 失败`,
+                category: ErrorCategory.UI,
+                level: ErrorLevel.WARNING,
+                details: { action: 'disableView', viewId }
+            }
+        );
+    }
+
+    /**
+     * 切换指定视图的启用状态
+     * @param viewId 视图ID标识符
+     */
+    public toggleView(viewId: string): void {
+        tryCatchWrapper(
+            () => {
+                const view = this.getViewById(viewId);
+                if (view) {
+                    view.toggle();
+                    this.logger.info(`视图 ${viewId} 状态已切换，当前: ${view.isEnabled() ? '启用' : '禁用'}`);
+                }
+            },
+            'ViewManager',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: `切换视图 ${viewId} 状态失败`,
+                category: ErrorCategory.UI,
+                level: ErrorLevel.WARNING,
+                details: { action: 'toggleView', viewId }
+            }
+        );
+    }
+
+    /**
+     * 获取视图的启用状态
+     * @param viewId 视图ID标识符
+     * @returns 如果视图启用则返回true，否则返回false
+     */
+    public isViewEnabled(viewId: string): boolean {
+        return tryCatchWrapper(
+            () => {
+                const view = this.getViewById(viewId);
+                return view ? view.isEnabled() : false;
+            },
+            'ViewManager',
+            this.errorManager,
+            this.logger,
+            {
+                errorMessage: `获取视图 ${viewId} 状态失败`,
+                category: ErrorCategory.UI,
+                level: ErrorLevel.DEBUG,
+                details: { action: 'isViewEnabled', viewId }
+            }
+        ) ?? false;
+    }
+
+    /**
+     * 根据ID获取视图实例
+     * @param viewId 视图ID标识符
+     * @returns 对应的视图实例，如果不存在则返回null
+     */
+    private getViewById(viewId: string): any {
+        switch (viewId) {
+            case 'explorer':
+                return this.explorerView;
+            case 'editor':
+                return this.editorLinkView;
+            case 'reading':
+                return this.readingView;
+            default:
+                this.logger.debug(`未找到视图 ${viewId}`);
+                return null;
+        }
+    }
 } 
