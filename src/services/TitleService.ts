@@ -6,7 +6,7 @@ import { CacheManager } from '../CacheManager';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
-import { tryCatchWrapper } from '../utils/ErrorHelpers';
+import { ErrorHandled, AsyncErrorHandled } from '../utils/ErrorDecorators';
 import { TitleChangedEvent } from '../types/ObsidianExtensions';
 
 /**
@@ -30,36 +30,28 @@ export class TitleService {
      * @param fallbackToOriginal 如果没有找到标题是否返回原始文件名
      * @returns 显示标题或原始文件名（如果设置了fallbackToOriginal）或null
      */
+    @ErrorHandled({
+        errorMessage: '获取显示标题时发生错误',
+        category: ErrorCategory.DATA,
+        level: ErrorLevel.WARNING
+    })
     getDisplayTitle(fileName: string, fallbackToOriginal = true): string | null {
-        return tryCatchWrapper(
-            () => {
-                // 移除文件扩展名
-                const baseName = this.fileService.getBaseName(fileName);
-                
-                // 尝试从缓存获取标题
-                let displayTitle = this.cacheManager.getDisplayTitle(baseName);
-                
-                // 如果缓存中没有找到，尝试处理文件
-                if (!displayTitle) {
-                    // 查找匹配的文件
-                    const file = this.fileService.findFile(baseName);
-                    if (file) {
-                        displayTitle = this.cacheManager.processFile(file);
-                    }
-                }
-                
-                return displayTitle || (fallbackToOriginal ? fileName : null);
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '获取显示标题时发生错误',
-                category: ErrorCategory.DATA,
-                level: ErrorLevel.WARNING,
-                details: { fileName }
+        // 移除文件扩展名
+        const baseName = this.fileService.getBaseName(fileName);
+        
+        // 尝试从缓存获取标题
+        let displayTitle = this.cacheManager.getDisplayTitle(baseName);
+        
+        // 如果缓存中没有找到，尝试处理文件
+        if (!displayTitle) {
+            // 查找匹配的文件
+            const file = this.fileService.findFile(baseName);
+            if (file) {
+                displayTitle = this.cacheManager.processFile(file);
             }
-        );
+        }
+        
+        return displayTitle || (fallbackToOriginal ? fileName : null);
     }
     
     /**
@@ -67,21 +59,13 @@ export class TitleService {
      * @param file 文件对象
      * @returns 缓存的标题或null
      */
+    @ErrorHandled({
+        errorMessage: '从缓存获取标题时发生错误',
+        category: ErrorCategory.CACHE,
+        level: ErrorLevel.WARNING
+    })
     getCachedDisplayTitle(file: TFile): string | null {
-        return tryCatchWrapper(
-            () => {
-                return this.cacheManager.getDisplayTitle(file.basename) || null;
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '从缓存获取标题时发生错误',
-                category: ErrorCategory.CACHE,
-                level: ErrorLevel.WARNING,
-                details: { filePath: file.path }
-            }
-        );
+        return this.cacheManager.getDisplayTitle(file.basename) || null;
     }
     
     /**
@@ -89,29 +73,21 @@ export class TitleService {
      * @param file 文件对象
      * @returns 处理后的标题或null
      */
+    @ErrorHandled({
+        errorMessage: '处理文件标题时发生错误',
+        category: ErrorCategory.DATA,
+        level: ErrorLevel.WARNING
+    })
     processFileTitle(file: TFile): string | null {
-        return tryCatchWrapper(
-            () => {
-                const oldTitle = this.cacheManager.getDisplayTitle(file.basename);
-                const newTitle = this.cacheManager.processFile(file);
-                
-                // 如果标题发生变化，触发标题变更事件
-                if (oldTitle !== newTitle && newTitle !== null) {
-                    this.dispatchTitleChangedEvent(file.basename, oldTitle || file.basename, newTitle);
-                }
-                
-                return newTitle;
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '处理文件标题时发生错误',
-                category: ErrorCategory.DATA,
-                level: ErrorLevel.WARNING,
-                details: { filePath: file.path }
-            }
-        );
+        const oldTitle = this.cacheManager.getDisplayTitle(file.basename);
+        const newTitle = this.cacheManager.processFile(file);
+        
+        // 如果标题发生变化，触发标题变更事件
+        if (oldTitle !== newTitle && newTitle !== null) {
+            this.dispatchTitleChangedEvent(file.basename, oldTitle || file.basename, newTitle);
+        }
+        
+        return newTitle;
     }
     
     /**
@@ -119,27 +95,19 @@ export class TitleService {
      * @param fileName 文件名
      * @param newTitle 新标题
      */
+    @ErrorHandled({
+        errorMessage: '更新文件标题失败',
+        category: ErrorCategory.DATA,
+        level: ErrorLevel.WARNING
+    })
     updateFileTitle(fileName: string, newTitle: string): void {
-        tryCatchWrapper(
-            () => {
-                const oldTitle = this.cacheManager.getDisplayTitle(fileName) || fileName;
-                
-                // 更新缓存
-                this.cacheManager.updateTitleCache(fileName, newTitle);
-                
-                // 触发标题变更事件
-                this.dispatchTitleChangedEvent(fileName, oldTitle, newTitle);
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '更新文件标题失败',
-                category: ErrorCategory.DATA,
-                level: ErrorLevel.WARNING,
-                details: { fileName, newTitle }
-            }
-        );
+        const oldTitle = this.cacheManager.getDisplayTitle(fileName) || fileName;
+        
+        // 更新缓存
+        this.cacheManager.updateTitleCache(fileName, newTitle);
+        
+        // 触发标题变更事件
+        this.dispatchTitleChangedEvent(fileName, oldTitle, newTitle);
     }
     
     /**
@@ -148,91 +116,62 @@ export class TitleService {
      * @param oldTitle 旧标题
      * @param newTitle 新标题
      */
+    @ErrorHandled({
+        errorMessage: '分发标题变更事件失败',
+        category: ErrorCategory.EVENT,
+        level: ErrorLevel.WARNING
+    })
     private dispatchTitleChangedEvent(fileName: string, oldTitle: string, newTitle: string): void {
-        tryCatchWrapper(
-            () => {
-                const event: TitleChangedEvent = {
-                    oldTitle: oldTitle,
-                    newTitle: newTitle
-                };
-                
-                // 触发应用范围的事件
-                (this.app.workspace as unknown as Events).trigger('title-changed', event);
-                
-                this.logger.debug(`标题变更事件已分发: ${oldTitle} -> ${newTitle}`);
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '分发标题变更事件失败',
-                category: ErrorCategory.EVENT,
-                level: ErrorLevel.WARNING,
-                details: { fileName, oldTitle, newTitle }
-            }
-        );
+        const event: TitleChangedEvent = {
+            oldTitle: oldTitle,
+            newTitle: newTitle
+        };
+        
+        // 触发应用范围的事件
+        (this.app.workspace as unknown as Events).trigger('title-changed', event);
+        
+        this.logger.debug(`标题变更事件已分发: ${oldTitle} -> ${newTitle}`);
     }
     
     /**
      * 无效化指定文件的缓存
      * @param file 文件对象
      */
+    @ErrorHandled({
+        errorMessage: '无效化文件缓存时发生错误',
+        category: ErrorCategory.CACHE,
+        level: ErrorLevel.WARNING
+    })
     invalidateFileCache(file: TFile): void {
-        tryCatchWrapper(
-            () => {
-                this.cacheManager.invalidateFile(file);
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '无效化文件缓存时发生错误',
-                category: ErrorCategory.CACHE,
-                level: ErrorLevel.WARNING,
-                details: { filePath: file.path }
-            }
-        );
+        this.cacheManager.invalidateFile(file);
     }
     
     /**
      * 重新处理所有文件的标题
      */
+    @ErrorHandled({
+        errorMessage: '重新处理所有文件标题时发生错误',
+        category: ErrorCategory.DATA,
+        level: ErrorLevel.WARNING
+    })
     reprocessAllFiles(): void {
-        tryCatchWrapper(
-            () => {
-                const files = this.app.vault.getMarkdownFiles();
-                files.forEach(file => {
-                    this.processFileTitle(file);
-                });
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '重新处理所有文件标题时发生错误',
-                category: ErrorCategory.DATA,
-                level: ErrorLevel.WARNING
-            }
-        );
+        const files = this.app.vault.getMarkdownFiles();
+        files.forEach(file => {
+            this.processFileTitle(file);
+        });
     }
     
     /**
      * 获取所有缓存的标题
      * @returns 文件名到标题的映射
      */
+    @ErrorHandled({
+        errorMessage: '获取所有标题失败',
+        category: ErrorCategory.DATA,
+        level: ErrorLevel.WARNING,
+        defaultValue: new Map<string, string>()
+    })
     getAllTitles(): Map<string, string> {
-        return tryCatchWrapper(
-            () => {
-                return this.cacheManager.getAllTitles();
-            },
-            'TitleService',
-            this.errorManager,
-            this.logger,
-            {
-                errorMessage: '获取所有标题失败',
-                category: ErrorCategory.DATA,
-                level: ErrorLevel.WARNING
-            }
-        ) || new Map<string, string>();
+        return this.cacheManager.getAllTitles();
     }
 } 
