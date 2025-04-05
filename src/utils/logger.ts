@@ -21,11 +21,13 @@ export enum LogLevel {
 export class Logger {
   private currentLevel: LogLevel;
   private prefix: string;
+  private plugin?: TitleChangerPlugin;
   
   constructor(
-    @inject(TYPES.Plugin) private plugin: TitleChangerPlugin,
+    @inject(TYPES.Plugin) plugin?: TitleChangerPlugin,
     prefix: string = 'Title Changer'
   ) {
+    this.plugin = plugin;
     this.prefix = prefix;
     
     // 设置默认日志级别

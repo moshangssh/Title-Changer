@@ -13,6 +13,8 @@ import { DOMSelectorService } from "./services/DomSelectorService";
 import { UIStateManager } from "./services/UIStateManager";
 import { EditorLinkView } from "./views/EditorView";
 import { ReadingView } from "./views/ReadingView";
+import { GraphView } from "./views/GraphView";
+import { GraphNodeReplacer } from "./utils/GraphNodeReplacer";
 import { ErrorManagerService } from "./services/ErrorManagerService";
 import { Logger } from "./utils/Logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
@@ -27,8 +29,14 @@ import { EventBusService } from "./services/EventBusService";
 
 /**
  * 创建并配置IOC容器
+ * @param plugin 插件实例
+ * @param predefinedBindings 预定义的绑定映射表
+ * @returns 已配置的IOC容器
  */
-export function createContainer(plugin: TitleChangerPlugin): Container {
+export function createContainer(
+    plugin: TitleChangerPlugin, 
+    predefinedBindings?: Map<symbol, any>
+): Container {
     const container = new Container();
 
     // 注册核心组件
@@ -36,6 +44,20 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.App).toConstantValue(plugin.app);
     container.bind(TYPES.Vault).toConstantValue(plugin.app.vault);
     container.bind(TYPES.Settings).toConstantValue(plugin.settings);
+    
+    // 应用预定义绑定（如果有）
+    if (predefinedBindings) {
+        predefinedBindings.forEach((value, key) => {
+            // 如果已经有绑定，先解绑
+            if (container.isBound(key)) {
+                container.unbind(key);
+            }
+            container.bind(key).toConstantValue(value);
+        });
+    } else {
+        // 注册Logger服务（只有在没有预定义时）
+        container.bind(TYPES.Logger).to(Logger).inSingletonScope();
+    }
 
     // 注册管理器
     container.bind<ICacheManager>(TYPES.CacheManager).to(CacheManager).inSingletonScope();
@@ -46,9 +68,9 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();
     container.bind(TYPES.EditorLinkView).to(EditorLinkView).inSingletonScope();
     container.bind(TYPES.ReadingView).to(ReadingView).inSingletonScope();
+    container.bind(TYPES.GraphView).to(GraphView).inSingletonScope();
 
     // 注册服务
-    container.bind(TYPES.Logger).to(Logger).inSingletonScope();
     container.bind<IDOMSelectorService>(TYPES.DOMSelectorService).to(DOMSelectorService).inSingletonScope();
     container.bind(TYPES.FileHandlerService).to(FileHandlerService).inSingletonScope();
     container.bind(TYPES.UIStateManager).to(UIStateManager).inSingletonScope();
@@ -60,6 +82,9 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.TitleStateAdapter).to(TitleStateAdapter).inSingletonScope();
     container.bind(TYPES.UpdateScheduler).to(UpdateScheduler).inSingletonScope();
     container.bind<IEventBusService>(TYPES.EventBusService).to(EventBusService).inSingletonScope();
+    
+    // 注册工具
+    container.bind(TYPES.GraphNodeReplacer).to(GraphNodeReplacer).inSingletonScope();
     
     // 注册配置工厂
     container.bind(TYPES.SelectorFactory).to(SelectorFactory).inSingletonScope();

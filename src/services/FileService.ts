@@ -53,9 +53,15 @@ export class FileService {
      * @param fileName 文件名或路径
      * @returns 基本名称
      */
-    getBaseName(fileName: string): string {
+    getBaseName(fileName: string | undefined): string {
         return tryCatchWrapper(
             () => {
+                // 安全检查
+                if (fileName === undefined || fileName === null) {
+                    this.logger.debug('尝试处理undefined或null文件名');
+                    return 'untitled';
+                }
+                
                 // 移除路径部分
                 const baseName = fileName.split('/').pop() || fileName;
                 
@@ -71,7 +77,7 @@ export class FileService {
                 level: ErrorLevel.WARNING,
                 details: { fileName }
             }
-        ) || fileName; // 发生错误时返回原始文件名
+        ) || (fileName || 'untitled'); // 发生错误时返回原始文件名或安全默认值
     }
     
     /**

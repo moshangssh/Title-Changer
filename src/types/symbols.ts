@@ -14,6 +14,7 @@ export const TYPES = {
   ExplorerView: Symbol.for("ExplorerView"),
   EditorLinkView: Symbol.for("EditorLinkView"),
   ReadingView: Symbol.for("ReadingView"),
+  GraphView: Symbol.for("GraphView"),
 
   // 服务
   FileHandlerService: Symbol.for("FileHandlerService"),
@@ -31,6 +32,9 @@ export const TYPES = {
   TitleStateAdapter: Symbol.for("TitleStateAdapter"),
   UpdateScheduler: Symbol.for("UpdateScheduler"),
   EventBusService: Symbol.for("EventBusService"),
+  
+  // 工具
+  GraphNodeReplacer: Symbol.for("GraphNodeReplacer"),
   
   // 配置工厂
   SelectorFactory: Symbol.for("SelectorFactory"),

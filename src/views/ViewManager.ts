@@ -4,6 +4,7 @@ import type { TitleChangerPlugin } from '../main';
 import type { ExplorerView } from './ExplorerView';
 import type { EditorLinkView } from './EditorView';
 import type { ReadingView } from './ReadingView';
+import type { GraphView } from './GraphView';
 import type { IViewManager } from '../types/ObsidianExtensions';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
@@ -23,6 +24,7 @@ export class ViewManager implements IViewManager {
     private explorerView: ExplorerView;
     private editorLinkView: EditorLinkView;
     private readingView: ReadingView;
+    private graphView: GraphView;
 
     /**
      * 构造函数
@@ -33,12 +35,14 @@ export class ViewManager implements IViewManager {
         @inject(TYPES.ExplorerView) explorerView: ExplorerView,
         @inject(TYPES.EditorLinkView) editorLinkView: EditorLinkView,
         @inject(TYPES.ReadingView) readingView: ReadingView,
+        @inject(TYPES.GraphView) graphView: GraphView,
         @inject(TYPES.Logger) private logger: Logger,
         @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {
         this.explorerView = explorerView;
         this.editorLinkView = editorLinkView;
         this.readingView = readingView;
+        this.graphView = graphView;
     }
 
     /**
@@ -51,6 +55,7 @@ export class ViewManager implements IViewManager {
                 this.explorerView.initialize();
                 this.editorLinkView.initialize();
                 this.readingView.initialize();
+                this.graphView.initialize();
                 
                 this.logger.info('视图管理器初始化完成');
             },
@@ -77,6 +82,7 @@ export class ViewManager implements IViewManager {
                 this.explorerView.unload();
                 this.editorLinkView.unload();
                 this.readingView.unload();
+                this.graphView.unload();
                 
                 this.logger.info('视图管理器已卸载');
             },
@@ -126,7 +132,7 @@ export class ViewManager implements IViewManager {
                     }
                 );
                 
-                // 最后更新阅读视图
+                // 更新阅读视图
                 tryCatchWrapper(
                     () => this.readingView.updateView(),
                     'ViewManager',
@@ -137,6 +143,20 @@ export class ViewManager implements IViewManager {
                         category: ErrorCategory.UI,
                         level: ErrorLevel.WARNING,
                         details: { component: 'readingView' }
+                    }
+                );
+                
+                // 更新图表视图
+                tryCatchWrapper(
+                    () => this.graphView.updateView(),
+                    'ViewManager',
+                    this.errorManager,
+                    this.logger,
+                    {
+                        errorMessage: '更新图表视图失败',
+                        category: ErrorCategory.UI,
+                        level: ErrorLevel.WARNING,
+                        details: { component: 'graphView' }
                     }
                 );
                 
@@ -309,8 +329,8 @@ export class ViewManager implements IViewManager {
 
     /**
      * 根据ID获取视图实例
-     * @param viewId 视图ID标识符
-     * @returns 对应的视图实例，如果不存在则返回null
+     * @param viewId 视图ID
+     * @returns 对应的视图实例，若不存在则返回null
      */
     private getViewById(viewId: string): any {
         switch (viewId) {
@@ -320,6 +340,8 @@ export class ViewManager implements IViewManager {
                 return this.editorLinkView;
             case 'reading':
                 return this.readingView;
+            case 'graph':
+                return this.graphView;
             default:
                 this.logger.debug(`未找到视图 ${viewId}`);
                 return null;

@@ -35,23 +35,34 @@ export class TitleService {
         category: ErrorCategory.DATA,
         level: ErrorLevel.WARNING
     })
-    getDisplayTitle(fileName: string, fallbackToOriginal = true): string | null {
-        // 移除文件扩展名
-        const baseName = this.fileService.getBaseName(fileName);
-        
-        // 尝试从缓存获取标题
-        let displayTitle = this.cacheManager.getDisplayTitle(baseName);
-        
-        // 如果缓存中没有找到，尝试处理文件
-        if (!displayTitle) {
-            // 查找匹配的文件
-            const file = this.fileService.findFile(baseName);
-            if (file) {
-                displayTitle = this.cacheManager.processFile(file);
-            }
+    getDisplayTitle(fileName: string | undefined, fallbackToOriginal = true): string | null {
+        // 安全检查：如果文件名为undefined或null，则返回安全默认值
+        if (fileName === undefined || fileName === null) {
+            this.logger.debug('尝试获取未定义文件名的显示标题');
+            return fallbackToOriginal ? 'Untitled' : null;
         }
         
-        return displayTitle || (fallbackToOriginal ? fileName : null);
+        // 移除文件扩展名
+        try {
+            const baseName = this.fileService.getBaseName(fileName);
+            
+            // 尝试从缓存获取标题
+            let displayTitle = this.cacheManager.getDisplayTitle(baseName);
+            
+            // 如果缓存中没有找到，尝试处理文件
+            if (!displayTitle) {
+                // 查找匹配的文件
+                const file = this.fileService.findFile(baseName);
+                if (file) {
+                    displayTitle = this.cacheManager.processFile(file);
+                }
+            }
+            
+            return displayTitle || (fallbackToOriginal ? fileName : null);
+        } catch (error) {
+            this.logger.error('处理文件标题时出错', { fileName, error });
+            return fallbackToOriginal ? fileName : null;
+        }
     }
     
     /**

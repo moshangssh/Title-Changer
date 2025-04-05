@@ -18,6 +18,7 @@ import { ErrorManagerService } from './services/ErrorManagerService';
 import { TitleStateAdapter } from './services/TitleStateAdapter';
 import { EventBusService } from './services/EventBusService';
 import { IEventBusService } from './types/ObsidianExtensions';
+import { GraphView } from './views/GraphView';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;
@@ -30,41 +31,70 @@ export class TitleChangerPlugin extends Plugin {
     private eventBus!: IEventBusService;
 
     async onload() {
-        // 加载设置
-        await this.loadSettings();
-
-        // 初始化 IoC 容器
-        this.initializeContainer();
-        
-        // 获取Logger服务
-        this.logger = this.container.get<Logger>(TYPES.Logger);
+        // 创建Logger实例，不传递插件实例避免循环依赖
+        this.logger = new Logger(undefined, 'Title Changer');
         this.logger.info('加载 Title Changer 插件');
 
-        // 初始化事件总线
+        // 加载用户设置
+        await this.loadSettings();
+
+        // 在初始化容器前，创建一个包含常量值的预定义绑定映射
+        const bindings = new Map<symbol, any>();
+        bindings.set(TYPES.Logger, this.logger);
+
+        // 初始化IOC容器，传入预定义绑定
+        this.initializeContainer(bindings);
+
+        // 获取主要服务实例
+        this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
+        this.explorerView = this.container.get<ExplorerView>(TYPES.ExplorerView);
+        this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
+        this.titleStateAdapter = this.container.get<TitleStateAdapter>(TYPES.TitleStateAdapter);
         this.eventBus = this.container.get<IEventBusService>(TYPES.EventBusService);
-        // 桥接Obsidian事件到事件总线
-        this.eventBus.bridgeObsidianEvents();
 
         // 加载样式
         this.loadStyles();
 
-        // 获取服务实例
-        this.viewManager = this.container.get<ViewManager>(TYPES.ViewManager);
-        this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
-        this.linkTransformer.setSettings(this.settings);
-        
-        // 初始化标题状态适配器
-        this.titleStateAdapter = this.container.get<TitleStateAdapter>(TYPES.TitleStateAdapter);
-        this.titleStateAdapter.initialize();
-
-        // 初始化视图
-        if (this.container.isBound(TYPES.ExplorerView)) {
-            this.explorerView = this.container.get<ExplorerView>(TYPES.ExplorerView);
-            this.explorerView.initialize();
-        }
-
-        // 添加设置选项卡
+        // 添加设置标签
         this.addSettingTab(new TitleChangerSettingTab(this.app, this));
+
+        // 初始化数据管理和事件监听
+        this.titleStateAdapter.initialize();
+        
+        // 初始化视图管理器 - 延迟一些组件初始化以确保Obsidian完全加载
+        try {
+            // 立即初始化基本视图
+            this.viewManager.initialize();
+            
+            // 获取GraphView实例，保存到本地变量以避免重复获取
+            let graphViewRef: GraphView | null = null;
+            try {
+                graphViewRef = this.container.get<GraphView>(TYPES.GraphView);
+            } catch (error) {
+                this.logger.error('无法获取GraphView实例', { error });
+            }
+            
+            // 在应用程序完全加载后，特别是图表视图的初始化和重新应用节点替换
+            this.app.workspace.onLayoutReady(() => {
+                this.logger.info('Obsidian布局已准备完成，执行延迟初始化任务');
+                
+                // 重新初始化图表视图确保正确应用替换
+                if (graphViewRef) {
+                    setTimeout(() => {
+                        try {
+                            graphViewRef?.updateView();
+                            this.logger.info('已成功更新图表视图');
+                        } catch (error) {
+                            this.logger.error('延迟初始化图表视图失败', { error });
+                        }
+                    }, 500);
+                } else {
+                    this.logger.warn('无法更新图表视图：实例不存在');
+                }
+            });
+        } catch (error) {
+            this.logger.error('初始化视图管理器失败', { error });
+        }
 
         // 根据设置初始化ReadingView状态
         if (!this.settings.enableReadingView) {
@@ -75,9 +105,6 @@ export class TitleChangerPlugin extends Plugin {
         if (!this.settings.enableEditorLinkView) {
             this.viewManager.disableView('editor');
         }
-
-        // 初始化视图管理器
-        this.viewManager.initialize();
 
         // 添加命令，刷新所有视图
         this.addCommand({
@@ -156,8 +183,8 @@ export class TitleChangerPlugin extends Plugin {
         }
     }
 
-    private initializeContainer(): void {
-        this.container = createContainer(this);
+    private initializeContainer(bindings: Map<symbol, any>): void {
+        this.container = createContainer(this, bindings);
     }
 
     /**

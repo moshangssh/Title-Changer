@@ -125,6 +125,11 @@ export interface TitleChangerSettings {
     enableEditorLinkView: boolean;
     
     /**
+     * 是否启用图表视图标题替换
+     */
+    enableGraphView: boolean;
+    
+    /**
      * 是否使用缓存
      */
     useCache: boolean;
@@ -146,6 +151,7 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     includedFolders: [],
     enableReadingView: true,
     enableEditorLinkView: true,
+    enableGraphView: true,
     useCache: true,
     cacheExpiration: 60,
     debugMode: false
@@ -212,55 +218,65 @@ export class TitleChangerSettingTab extends PluginSettingTab {
         containerEl.createEl('h3', { text: '显示选项' });
         
         new Setting(containerEl)
-            .setName('文件列表')
+            .setName('启用文件浏览器视图')
+            .setDesc('在文件浏览器中显示经过处理的文件名')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enabled)
                 .onChange(async (value) => {
                     this.plugin.settings.enabled = value;
-                    await this.plugin.saveSettings();
-                    
-                    // 立即应用状态变化
-                    this.plugin.refreshExplorerView();
-                }));
-                
-        new Setting(containerEl)
-            .setName('阅读视图')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.enableReadingView)
-                .onChange(async (value) => {
-                    this.plugin.settings.enableReadingView = value;
-                    
-                    // 根据设置立即启用或禁用ReadingView
-                    const viewManager = this.plugin.getViewManager();
-                    if (viewManager) {
-                        if (value) {
-                            viewManager.enableView('reading');
-                        } else {
-                            viewManager.disableView('reading');
-                        }
+                    if (value) {
+                        this.plugin.getViewManager().enableView('explorer');
+                    } else {
+                        this.plugin.getViewManager().disableView('explorer');
                     }
-                    
                     await this.plugin.saveSettings();
                 })
             );
-            
+
         new Setting(containerEl)
-            .setName('编辑器视图')
+            .setName('启用编辑器链接视图')
+            .setDesc('在编辑器中显示经过处理的链接文本')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableEditorLinkView)
                 .onChange(async (value) => {
                     this.plugin.settings.enableEditorLinkView = value;
-                    
-                    // 根据设置立即启用或禁用视图
-                    const viewManager = this.plugin.getViewManager();
-                    if (viewManager) {
-                        if (value) {
-                            viewManager.enableView('editor');
-                        } else {
-                            viewManager.disableView('editor');
-                        }
+                    if (value) {
+                        this.plugin.getViewManager().enableView('editor');
+                    } else {
+                        this.plugin.getViewManager().disableView('editor');
                     }
-                    
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('启用阅读视图')
+            .setDesc('在阅读视图中显示经过处理的文件名和链接文本')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableReadingView)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableReadingView = value;
+                    if (value) {
+                        this.plugin.getViewManager().enableView('reading');
+                    } else {
+                        this.plugin.getViewManager().disableView('reading');
+                    }
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('启用图表视图')
+            .setDesc('在图表视图(Graph View)中显示修改后的文件名')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableGraphView)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableGraphView = value;
+                    if (value) {
+                        this.plugin.getViewManager().enableView('graph');
+                    } else {
+                        this.plugin.getViewManager().disableView('graph');
+                    }
                     await this.plugin.saveSettings();
                 })
             );
@@ -467,7 +483,7 @@ export class TitleChangerSettingTab extends PluginSettingTab {
             // 添加自定义输入提示
             const customSuggestion = suggestionsContainer.createDiv('suggestion-item custom');
             customSuggestion.textContent = `添加: ${inputValue}`;
-            
+
             customSuggestion.addEventListener('click', async () => {
                 await this.addCustomFolder(inputValue);
                 
@@ -477,7 +493,7 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                 
                 suggestionsContainer.style.display = 'none';
             });
-            
+
             this.folderSuggestions.push(customSuggestion);
         } else {
             // 添加匹配的文件夹建议
@@ -501,7 +517,7 @@ export class TitleChangerSettingTab extends PluginSettingTab {
         
         suggestionsContainer.style.display = 'block';
     }
-    
+
     // 添加文件夹到设置
     private async addFolder(folder: string): Promise<void> {
         if (!this.plugin.settings.includedFolders.includes(folder)) {
@@ -510,40 +526,40 @@ export class TitleChangerSettingTab extends PluginSettingTab {
             this.updateFolderList();
         }
     }
-    
+
     // 添加自定义文件夹输入到设置
     private async addCustomFolder(folderPath: string): Promise<void> {
         if (folderPath.trim() === '') return;
-        
+
         // 规范化路径：移除开头和结尾的斜杠
         const normalizedPath = folderPath.trim()
             .replace(/^\/+/, '')  // 移除开头的斜杠
             .replace(/\/+$/, ''); // 移除结尾的斜杠
-        
+
         if (normalizedPath && !this.plugin.settings.includedFolders.includes(normalizedPath)) {
             this.plugin.settings.includedFolders.push(normalizedPath);
             await this.plugin.saveSettings();
             this.updateFolderList();
         }
     }
-    
+
     // 移除文件夹
     private async removeFolder(folder: string): Promise<void> {
         this.plugin.settings.includedFolders = this.plugin.settings.includedFolders.filter(f => f !== folder);
         await this.plugin.saveSettings();
         this.updateFolderList();
     }
-    
+
     // 获取所有文件夹
     private getAllFolders(): string[] {
         const folders: string[] = [];
         const vault = this.app.vault;
-        
+
         // 获取所有文件夹
         const allFolders = vault.getAllLoadedFiles()
             .filter(f => f instanceof TFolder && f.path !== "/")
             .map(f => f.path);
-        
+
         return allFolders;
     }
-} 
+}
