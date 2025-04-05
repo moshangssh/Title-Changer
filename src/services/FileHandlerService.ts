@@ -2,12 +2,20 @@ import { TFile, Vault } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/Symbols';
 import { CacheManager } from '../CacheManager';
-import { ExplorerStateService } from './ExplorerStateService';
+import type { UIStateManager } from './UIStateManager';
 import { DOMSelectorService } from './DomSelectorService';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/ErrorHelpers';
+
+// 定义一个通用接口，包含两个服务共同的方法
+export interface IStateService {
+    saveOriginalText(element: Element, text: string): void;
+    getOriginalText(element: Element): string | undefined;
+    hasOriginalText(element: Element): boolean;
+    restoreOriginalText(element: Element): boolean;
+}
 
 /**
  * 文件处理服务，负责处理文件相关操作
@@ -101,7 +109,7 @@ export class FileHandlerService {
     processFileItem(
         fileItem: HTMLElement,
         cacheManager: CacheManager,
-        stateService: ExplorerStateService,
+        stateService: IStateService,
         enabled: boolean = true
     ): void {
         handleDataOperation(
@@ -175,7 +183,7 @@ export class FileHandlerService {
     processTextElements(
         elements: Element[],
         cacheManager: CacheManager,
-        stateService: ExplorerStateService,
+        stateService: IStateService,
         enabled: boolean = true
     ): void {
         // 验证输入参数

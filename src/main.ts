@@ -10,7 +10,7 @@ import { ExplorerView } from './views/ExplorerView';
 import { EditorLinkView } from './views/EditorView';
 import { FileHandlerService } from './services/FileHandlerService';
 import { DOMSelectorService } from './services/DomSelectorService';
-import { ExplorerStateService } from './services/ExplorerStateService';
+import { UIStateManager } from './services/UIStateManager';
 import { ExplorerEventsService } from './services/ExplorerEventsService';
 import { LinkTransformerService } from './services/LinkTransformerService';
 import { UpdateScheduler } from './services/UpdateSchedulerService';

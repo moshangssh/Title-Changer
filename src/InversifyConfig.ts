@@ -10,7 +10,7 @@ import { FileHandlerService } from "./services/FileHandlerService";
 import { ExplorerView } from "./views/ExplorerView";
 import { ExplorerEventsService } from "./services/ExplorerEventsService";
 import { DOMSelectorService } from "./services/DomSelectorService";
-import { ExplorerStateService } from "./services/ExplorerStateService";
+import { UIStateManager } from "./services/UIStateManager";
 import { EditorLinkView } from "./views/EditorView";
 import { ReadingView } from "./views/ReadingView";
 import { ErrorManagerService } from "./services/ErrorManagerService";
@@ -50,7 +50,7 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.Logger).to(Logger).inSingletonScope();
     container.bind<IDOMSelectorService>(TYPES.DOMSelectorService).to(DOMSelectorService).inSingletonScope();
     container.bind(TYPES.FileHandlerService).to(FileHandlerService).inSingletonScope();
-    container.bind(TYPES.ExplorerStateService).to(ExplorerStateService).inSingletonScope();
+    container.bind(TYPES.UIStateManager).to(UIStateManager).inSingletonScope();
     container.bind(TYPES.ExplorerEventsService).to(ExplorerEventsService).inSingletonScope();
     container.bind<IEditorExtensionManager>(TYPES.EditorExtensionManager).to(EditorExtensionManager).inSingletonScope();
     container.bind(TYPES.LinkTransformerService).to(LinkTransformerService).inSingletonScope();

@@ -1,29 +1,24 @@
 import { injectable, inject } from 'inversify';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory, DataError } from '../utils/Errors';
+import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper, logErrorsWithoutThrowing, validateData } from '../utils/ErrorHelpers';
 import { Logger } from '../utils/Logger';
 import { TYPES } from '../types/Symbols';
+import type { IDOMSelectorService } from '../types/ObsidianExtensions';
 
 /**
- * 用于存储原始文本的WeakMap键值对
- */
-interface ElementTextPair {
-    element: Element;
-    text: string;
-}
-
-/**
- * 文件浏览器状态服务，负责管理文件浏览器的状态
+ * UI状态管理器服务，负责管理UI元素状态
+ * 包括元素原始文本存储、文件浏览器状态维护等
  */
 @injectable()
-export class ExplorerStateService {
+export class UIStateManager {
     // 保存原始文件名显示方法
     private originalDisplayText: WeakMap<Element, string> = new WeakMap();
 
     constructor(
         @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService,
-        @inject(TYPES.Logger) private logger: Logger
+        @inject(TYPES.Logger) private logger: Logger,
+        @inject(TYPES.DOMSelectorService) private domSelector: IDOMSelectorService
     ) {}
 
     /**
@@ -87,52 +82,27 @@ export class ExplorerStateService {
     /**
      * 恢复所有原始文件名
      */
-    restoreAllOriginalFilenames(getElements: () => Element[]): void {
+    restoreAllOriginalFilenames(): void {
         tryCatchWrapper(
             () => {
-                // 验证输入
-                validateData(getElements, (fn) => typeof fn === 'function', 'getElements必须是函数', this.constructor.name);
-                
-                const elements = getElements();
-                if (!Array.isArray(elements)) {
-                    this.logger.warn('getElements未返回数组', { result: typeof elements });
-                    return null;
-                }
-                
+                const fileExplorers = this.domSelector.getFileExplorers();
                 let restoredCount = 0;
-                elements.forEach(element => {
-                    logErrorsWithoutThrowing(
-                        () => {
-                            if (!(element instanceof Element)) {
-                                return false;
-                            }
-                            
-                            const originalText = this.originalDisplayText.get(element);
-                            if (originalText) {
-                                element.textContent = originalText;
-                                restoredCount++;
-                            }
-                            return true;
-                        },
-                        this.constructor.name,
-                        this.errorManager,
-                        this.logger,
-                        {
-                            errorMessage: '恢复单个元素文本失败',
-                            category: ErrorCategory.UI,
-                            level: ErrorLevel.DEBUG,
-                            defaultValue: false,
-                            details: { 
-                                elementTagName: element instanceof Element ? element.tagName : typeof element
-                            }
+                
+                fileExplorers.forEach(explorer => {
+                    const fileItems = this.domSelector.getFileItems(explorer);
+                    fileItems.forEach(fileItem => {
+                        const titleElement = this.domSelector.getTitleElement(fileItem);
+                        if (titleElement) {
+                            this.restoreOriginalText(titleElement);
+                            restoredCount++;
                         }
-                    );
+                    });
                 });
 
                 // 清空原始文本存储
                 this.originalDisplayText = new WeakMap();
                 
-                this.logger.debug('恢复完成', { totalElements: elements.length, restoredCount });
+                this.logger.debug('恢复完成', { totalExplorers: fileExplorers.length, restoredCount });
                 return true;
             },
             this.constructor.name,
@@ -142,7 +112,6 @@ export class ExplorerStateService {
                 errorMessage: '恢复所有原始文件名失败',
                 category: ErrorCategory.DATA,
                 level: ErrorLevel.ERROR,
-                details: { getElementsProvided: !!getElements },
                 userVisible: true
             }
         );
@@ -233,4 +202,4 @@ export class ExplorerStateService {
             }
         );
     }
-} 
+}

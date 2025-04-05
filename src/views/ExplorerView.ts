@@ -5,7 +5,7 @@ import type { TitleChangerPlugin } from '../main';
 import { DOMSelectorService } from '../services/DomSelectorService';
 import { ExplorerEventsService } from '../services/ExplorerEventsService';
 import { FileHandlerService } from '../services/FileHandlerService';
-import { ExplorerStateService } from '../services/ExplorerStateService';
+import { UIStateManager } from '../services/UIStateManager';
 import { CacheManager } from '../CacheManager';
 import { Logger } from '../utils/Logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
@@ -41,7 +41,7 @@ export class ExplorerView extends AbstractView {
         @inject(TYPES.DOMSelectorService) private domSelector: DOMSelectorService,
         @inject(TYPES.ExplorerEventsService) private eventsService: ExplorerEventsService,
         @inject(TYPES.FileHandlerService) private fileHandler: FileHandlerService,
-        @inject(TYPES.ExplorerStateService) private stateService: ExplorerStateService,
+        @inject(TYPES.UIStateManager) private uiStateManager: UIStateManager,
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
         @inject(TYPES.UpdateScheduler) private updateScheduler: UpdateScheduler
     ) {
@@ -270,17 +270,25 @@ export class ExplorerView extends AbstractView {
                             if (fileItems.length === 0) {
                                 // 如果没有找到文件项，尝试处理所有文本元素
                                 const textElements = this.domSelector.getTextElements(explorer);
-                                this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService, isEnabled);
+                                this.fileHandler.processTextElements(textElements, this.cacheManager, this.uiStateManager, isEnabled);
                             } else {
                                 // 处理找到的文件项
                                 fileItems.forEach(fileItem => {
-                                    this.fileHandler.processFileItem(fileItem, this.cacheManager, this.stateService, isEnabled);
+                                    // 处理每个文本元素
+                                    const textElements = this.domSelector.getTextElements(fileItem);
+                                    this.fileHandler.processTextElements(textElements, this.cacheManager, this.uiStateManager, isEnabled);
+
+                                    // 处理个别文件项
+                                    this.fileHandler.processFileItem(fileItem, this.cacheManager, this.uiStateManager, isEnabled);
                                 });
                                 
                                 // 为防止某些文件项未被正确识别，也处理文本元素
                                 if (fileItems.length < 3) { // 如果文件项很少，可能是识别有问题
-                                    const textElements = this.domSelector.getTextElements(explorer);
-                                    this.fileHandler.processTextElements(textElements, this.cacheManager, this.stateService, isEnabled);
+                                    // 修复从文件项数组获取文本元素的错误
+                                    const allTextElements = fileItems.flatMap(item => 
+                                        this.domSelector.getTextElements(item)
+                                    );
+                                    this.fileHandler.processTextElements(allTextElements, this.cacheManager, this.uiStateManager, isEnabled);
                                 }
                             }
                         },
@@ -423,10 +431,8 @@ export class ExplorerView extends AbstractView {
                     this.virtualScrollIntervalId = null;
                 }
                 
-                // 恢复所有原始文件名
-                this.stateService.restoreAllOriginalFilenames(() => 
-                    this.domSelector.getTextElements(document.body)
-                );
+                // 恢复所有原始文件名，使用新的无参数方法
+                this.uiStateManager.restoreAllOriginalFilenames();
                 
                 // 清除视图准备就绪计时器
                 if (this.viewportReadyTimer !== null) {

@@ -18,7 +18,7 @@ export const TYPES = {
   // 服务
   FileHandlerService: Symbol.for("FileHandlerService"),
   DOMSelectorService: Symbol.for("DOMSelectorService"),
-  ExplorerStateService: Symbol.for("ExplorerStateService"),
+  UIStateManager: Symbol.for("UIStateManager"),
   ExplorerEventsService: Symbol.for("ExplorerEventsService"),
   Logger: Symbol.for("Logger"),
   EditorExtensionManager: Symbol.for("EditorExtensionManager"),
