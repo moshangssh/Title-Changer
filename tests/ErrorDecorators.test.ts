@@ -1,7 +1,7 @@
 import { ErrorHandled, AsyncErrorHandled, ClassErrorHandled, ErrorHandlerOptions, ErrorHandler } from '../src/utils/ErrorDecorators';
 import { ErrorCategory, TitleChangerError } from '../src/utils/Errors';
 import { ErrorLevel, ErrorManagerService } from '../src/services/ErrorManagerService';
-import { Logger } from '../src/utils/Logger';
+import { Logger } from '../src/utils/logger';
 
 // 模拟错误管理器
 class MockErrorManager {

@@ -1,10 +1,10 @@
 import { TFile, Vault } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { CacheManager } from '../CacheManager';
 import type { UIStateManager } from './UIStateManager';
 import { DOMSelectorService } from './DomSelectorService';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/ErrorHelpers';

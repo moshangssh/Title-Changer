@@ -5,9 +5,9 @@
 import { baseSelectors, detectObsidianVersion, SelectorVersion } from './BaseSelectors';
 import { modernSelectors } from './ModernSelectors';
 import { legacySelectors } from './LegacySelectors';
-import { Logger } from '../../utils/Logger';
+import { Logger } from '../../utils/logger';
 import { injectable, inject, optional } from 'inversify';
-import { TYPES } from '../../types/Symbols';
+import { TYPES } from '../../types/symbols';
 
 /**
  * 选择器配置项

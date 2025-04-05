@@ -1,9 +1,9 @@
 import { App, TFile, Events } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { FileService } from './FileService';
 import { CacheManager } from '../CacheManager';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { ErrorHandled, AsyncErrorHandled } from '../utils/ErrorDecorators';

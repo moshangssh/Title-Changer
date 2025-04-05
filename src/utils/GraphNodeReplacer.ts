@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { TitleService } from '../services/TitleService';
 import { Logger } from './Logger';
 import { App, WorkspaceLeaf } from 'obsidian';

@@ -2,8 +2,8 @@ import { injectable, inject } from 'inversify';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper, logErrorsWithoutThrowing, validateData } from '../utils/ErrorHelpers';
-import { Logger } from '../utils/Logger';
-import { TYPES } from '../types/Symbols';
+import { Logger } from '../utils/logger';
+import { TYPES } from '../types/symbols';
 import type { IDOMSelectorService } from '../types/ObsidianExtensions';
 
 /**

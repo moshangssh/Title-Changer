@@ -1,12 +1,12 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import type { ExplorerView } from './ExplorerView';
 import type { EditorLinkView } from './EditorView';
 import type { ReadingView } from './ReadingView';
 import type { GraphView } from './GraphView';
 import type { IViewManager } from '../types/ObsidianExtensions';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { 

@@ -3,7 +3,7 @@
  */
 import { StateField, StateEffect, Extension, EditorState } from '@codemirror/state';
 import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
-import { Logger } from '../../utils/Logger';
+import { Logger } from '../../utils/logger';
 import { ErrorCategory } from '../../utils/Errors';
 import { tryCatchWrapper } from '../../utils/ErrorHelpers';
 

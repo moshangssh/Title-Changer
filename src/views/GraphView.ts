@@ -1,8 +1,8 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { AbstractView } from './base/abstract-view';
 import type { IEventBusService } from '../types/ObsidianExtensions';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
 import { TitleService } from '../services/TitleService';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';

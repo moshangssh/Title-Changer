@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import { TitleChangerSettings } from '../settings';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { CacheManager } from '../CacheManager';
 import { TFile } from 'obsidian';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
@@ -14,7 +14,7 @@ import {
     tryCatchWithValidation,
     ErrorHandler
 } from '../utils/ErrorHelpers';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 
 @injectable()
 export class LinkTransformerService {

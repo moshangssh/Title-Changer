@@ -1,6 +1,6 @@
 import { Container } from 'inversify';
 import { DOMSelectorService } from '../../../src/services/DomSelectorService';
-import { TYPES } from '../../../src/types/Symbols';
+import { TYPES } from '../../../src/types/symbols';
 
 describe('DOMSelectorService', () => {
   let container: Container;

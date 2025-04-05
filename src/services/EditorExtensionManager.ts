@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import type { 
     IEditorExtensionManager, 
@@ -8,7 +8,7 @@ import type {
     ExtendedWorkspace 
 } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper, handleEditorOperation } from '../utils/ErrorHelpers';
 

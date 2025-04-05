@@ -1,10 +1,10 @@
 import { TFile, Events, Workspace, EventRef, App, WorkspaceLeaf } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { DOMSelectorService } from './DomSelectorService';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory, EventError } from '../utils/Errors';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { EventType } from '../types/ObsidianExtensions';
 import type { 
     IDOMSelectorService, 

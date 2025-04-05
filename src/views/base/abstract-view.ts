@@ -1,7 +1,7 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../../types/Symbols';
+import { TYPES } from '../../types/symbols';
 import type { TitleChangerPlugin } from '../../main';
-import { Logger } from '../../utils/Logger';
+import { Logger } from '../../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
 import { tryCatchWrapper } from '../../utils/ErrorHelpers';
 import { ErrorCategory } from '../../utils/Errors';

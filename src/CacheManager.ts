@@ -1,11 +1,11 @@
 import { TFile } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from './types/Symbols';
+import { TYPES } from './types/symbols';
 import type { TitleChangerSettings } from './settings';
 import { FolderChecker } from './utils/FolderChecker';
 import { TitleProcessor } from './utils/TitleProcessor';
 import type { ICacheManager } from './types/ObsidianExtensions';
-import { Logger } from './utils/Logger';
+import { Logger } from './utils/logger';
 import { ErrorManagerService } from './services/ErrorManagerService';
 import { ErrorCategory } from './utils/Errors';
 import { tryCatchWrapper } from './utils/ErrorHelpers';

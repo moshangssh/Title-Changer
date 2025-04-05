@@ -2,7 +2,7 @@ import { WidgetType } from '@codemirror/view';
 import { Plugin } from 'obsidian';
 import { createSpan } from '../../utils/DomHelpers';
 import { ErrorManagerService } from '../../services/ErrorManagerService';
-import { Logger } from '../../utils/Logger';
+import { Logger } from '../../utils/logger';
 
 /**
  * 插件类型声明

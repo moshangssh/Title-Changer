@@ -13,7 +13,7 @@ import {
     querySelectorAll
 } from '../../../src/utils/DomHelpers';
 import { ErrorManagerService } from '../../../src/services/ErrorManagerService';
-import { Logger } from '../../../src/utils/Logger';
+import { Logger } from '../../../src/utils/logger';
 
 // 模拟错误管理器和日志记录器
 const mockErrorManager = {

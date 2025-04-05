@@ -4,8 +4,8 @@ import { IDOMSelectorService } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory, UIError } from '../utils/Errors';
 import { tryCatchWrapper, handleSpecificErrors, convertToTitleChangerError, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
-import { Logger } from '../utils/Logger';
-import { TYPES } from '../types/Symbols';
+import { Logger } from '../utils/logger';
+import { TYPES } from '../types/symbols';
 import { SelectorFactory, SelectorConfig } from '../config/selectors';
 
 /**

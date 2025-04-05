@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
-import { Logger } from '../utils/Logger';
+import { TYPES } from '../types/symbols';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';

@@ -2,13 +2,13 @@ import { EditorView, Decoration, DecorationSet, ViewUpdate, ViewPlugin } from '@
 import { RangeSetBuilder } from '@codemirror/state';
 import type { ICacheManager } from '../types/ObsidianExtensions';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 import { extractSimpleWikiLinks, shouldReplaceTitle } from '../utils/WikiLinkProcessor';
 import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
 import { ErrorCategory, DecorationError } from '../utils/Errors';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 
 @injectable()
 export class DecorationManager {

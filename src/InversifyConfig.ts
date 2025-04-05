@@ -1,6 +1,6 @@
 import { Container } from "inversify";
 import "reflect-metadata";
-import { TYPES } from "./types/Symbols";
+import { TYPES } from "./types/symbols";
 import { App, Vault } from "obsidian";
 import { TitleChangerPlugin } from "./main";
 import { TitleChangerSettings } from "./settings";
@@ -16,7 +16,7 @@ import { ReadingView } from "./views/ReadingView";
 import { GraphView } from "./views/GraphView";
 import { GraphNodeReplacer } from "./utils/GraphNodeReplacer";
 import { ErrorManagerService } from "./services/ErrorManagerService";
-import { Logger } from "./utils/Logger";
+import { Logger } from "./utils/logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
 import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager, IEventBusService } from "./types/ObsidianExtensions";
 import { LinkTransformerService } from "./services/LinkTransformerService";

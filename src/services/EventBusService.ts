@@ -1,6 +1,6 @@
 import { App, EventRef } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import { 
     EventType, 
     IEvent, 
@@ -9,7 +9,7 @@ import {
 } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory, EventError } from '../utils/Errors';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 
 interface Subscription {

@@ -1,13 +1,13 @@
 import { TFile, Events } from 'obsidian';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import { DOMSelectorService } from '../services/DomSelectorService';
 import { ExplorerEventsService } from '../services/ExplorerEventsService';
 import { FileHandlerService } from '../services/FileHandlerService';
 import { UIStateManager } from '../services/UIStateManager';
 import { CacheManager } from '../CacheManager';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
 import { 

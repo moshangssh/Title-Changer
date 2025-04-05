@@ -2,7 +2,7 @@ import { EditorView, ViewUpdate } from '@codemirror/view';
 import type { TitleChangerPlugin } from '../main';
 import type { ICacheManager } from '../types/ObsidianExtensions';
 import { injectable, inject } from 'inversify';
-import { TYPES } from '../types/Symbols';
+import { TYPES } from '../types/symbols';
 import type { ErrorManagerService } from './ErrorManagerService';
 import { ErrorLevel } from './ErrorManagerService';
 import { ErrorCategory } from '../utils/Errors';
@@ -12,7 +12,7 @@ import {
   handleEditorOperation, 
   tryCatchWithValidation 
 } from '../utils/ErrorHelpers';
-import { Logger } from '../utils/Logger';
+import { Logger } from '../utils/logger';
 
 @injectable()
 export class ViewportManager {

@@ -7,7 +7,7 @@ import { LinkTitleWidget } from '../widgets/LinkTitleWidget';
 import { extractWikiLinks, shouldReplaceTitle } from '../../utils/WikiLinkProcessor';
 import { handleEditorOperation, tryCatchWithValidation, tryCatchWrapper } from '../../utils/ErrorHelpers';
 import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
-import { Logger } from '../../utils/Logger';
+import { Logger } from '../../utils/logger';
 import { ErrorCategory } from '../../utils/Errors';
 import { TitleService } from '../../services/TitleService';
 import type { TitleChangerPlugin } from '../../main';
