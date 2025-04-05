@@ -30,6 +30,7 @@ export const TYPES = {
   TitleStateService: Symbol.for("TitleStateService"),
   TitleStateAdapter: Symbol.for("TitleStateAdapter"),
   UpdateScheduler: Symbol.for("UpdateScheduler"),
+  EventBusService: Symbol.for("EventBusService"),
   
   // 配置工厂
   SelectorFactory: Symbol.for("SelectorFactory"),

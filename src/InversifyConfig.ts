@@ -16,13 +16,14 @@ import { ReadingView } from "./views/ReadingView";
 import { ErrorManagerService } from "./services/ErrorManagerService";
 import { Logger } from "./utils/Logger";
 import { EditorExtensionManager } from "./services/EditorExtensionManager";
-import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager } from "./types/ObsidianExtensions";
+import type { ICacheManager, IViewManager, IDOMSelectorService, IEditorExtensionManager, IEventBusService } from "./types/ObsidianExtensions";
 import { LinkTransformerService } from "./services/LinkTransformerService";
 import { FileService } from "./services/FileService";
 import { TitleService } from "./services/TitleService";
 import { UpdateScheduler } from "./services/UpdateSchedulerService";
 import { SelectorFactory } from "./config/selectors";
 import { TitleStateAdapter } from "./services/TitleStateAdapter";
+import { EventBusService } from "./services/EventBusService";
 
 /**
  * 创建并配置IOC容器
@@ -58,6 +59,7 @@ export function createContainer(plugin: TitleChangerPlugin): Container {
     container.bind(TYPES.TitleService).to(TitleService).inSingletonScope();
     container.bind(TYPES.TitleStateAdapter).to(TitleStateAdapter).inSingletonScope();
     container.bind(TYPES.UpdateScheduler).to(UpdateScheduler).inSingletonScope();
+    container.bind<IEventBusService>(TYPES.EventBusService).to(EventBusService).inSingletonScope();
     
     // 注册配置工厂
     container.bind(TYPES.SelectorFactory).to(SelectorFactory).inSingletonScope();

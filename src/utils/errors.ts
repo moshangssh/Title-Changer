@@ -245,4 +245,17 @@ export class CacheError extends TitleChangerError {
     });
     this.name = 'CacheError';
   }
+}
+
+/**
+ * 事件相关错误
+ */
+export class EventError extends TitleChangerError {
+  constructor(message: string, options: Omit<ConstructorParameters<typeof TitleChangerError>[1], 'category'>) {
+    super(message, {
+      ...options,
+      category: ErrorCategory.EVENT
+    });
+    this.name = 'EventError';
+  }
 } 

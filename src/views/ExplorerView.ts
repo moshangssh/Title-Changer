@@ -90,17 +90,12 @@ export class ExplorerView extends AbstractView {
     private registerEvents(): void {
         this.safeOperation(
             () => {
-                // 注册DOM观察器
-                this.eventsService.registerDOMObserver(() => this.scheduleUpdate());
+                // 在初始化时为缓存失效设置回调函数
+                const invalidateFileCallback = (file: TFile) => this.cacheManager.invalidateFile(file);
+                const updateCallback = () => this.scheduleUpdate();
                 
-                // 注册文件事件
-                this.eventsService.registerFileEvents(
-                    (file) => this.cacheManager.invalidateFile(file),
-                    () => this.scheduleUpdate()
-                );
-                
-                // 注册布局事件
-                this.eventsService.registerLayoutEvents(() => this.scheduleUpdate());
+                // 使用统一的注册事件方法
+                this.eventsService.registerEvents(updateCallback, invalidateFileCallback);
             },
             'ExplorerView',
             '注册事件处理器失败',

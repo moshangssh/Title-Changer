@@ -155,4 +155,113 @@ export interface IEditorExtensionManager {
      * 刷新所有扩展
      */
     refreshAll(): void;
+}
+
+/**
+ * 事件类型定义
+ */
+export enum EventType {
+  // 文件事件
+  FILE_CREATED = 'file-created',
+  FILE_RENAMED = 'file-renamed',
+  FILE_DELETED = 'file-deleted',
+  FILE_MODIFIED = 'file-modified',
+  
+  // 标题事件
+  TITLE_CHANGED = 'title-changed',
+  LINK_TITLE_CHANGED = 'link-title-changed',
+  
+  // UI事件
+  UI_REFRESH = 'ui-refresh',
+  EXPLORER_CHANGED = 'explorer-changed',
+  DOM_MUTATION = 'dom-mutation',
+  VIEWPORT_CHANGED = 'viewport-changed',
+  
+  // 其他
+  PLUGIN_SETTINGS_CHANGED = 'plugin-settings-changed',
+  EDITOR_CHANGE = 'editor-change'
+}
+
+/**
+ * 通用事件接口
+ */
+export interface IEvent {
+  type: EventType;
+  payload?: any;
+  source?: string;
+  timestamp?: number;
+}
+
+/**
+ * 文件事件接口
+ */
+export interface FileEvent extends IEvent {
+  type: EventType.FILE_CREATED | EventType.FILE_RENAMED | EventType.FILE_DELETED | EventType.FILE_MODIFIED;
+  payload: {
+    file: TFile;
+    oldPath?: string;
+  };
+}
+
+/**
+ * DOM变化事件接口
+ */
+export interface DomMutationEvent extends IEvent {
+  type: EventType.DOM_MUTATION;
+  payload: {
+    target: Node;
+    mutations: MutationRecord[];
+  };
+}
+
+/**
+ * 视口变化事件接口
+ */
+export interface ViewportEvent extends IEvent {
+  type: EventType.VIEWPORT_CHANGED;
+  payload: {
+    element: Element;
+    isIntersecting: boolean;
+  };
+}
+
+/**
+ * 事件回调函数类型
+ */
+export type EventCallback<T extends IEvent = IEvent> = (event: T) => void;
+
+/**
+ * 事件总线服务接口
+ */
+export interface IEventBusService {
+  /**
+   * 发布事件
+   * @param event 事件对象
+   */
+  publish<T extends IEvent>(event: T): void;
+  
+  /**
+   * 订阅事件
+   * @param type 事件类型
+   * @param callback 回调函数
+   * @returns 订阅引用，用于取消订阅
+   */
+  subscribe<T extends IEvent>(type: EventType, callback: EventCallback<T>): string;
+  
+  /**
+   * 取消订阅
+   * @param subscriptionId 订阅ID
+   */
+  unsubscribe(subscriptionId: string): boolean;
+  
+  /**
+   * 取消所有订阅
+   */
+  unsubscribeAll(): void;
+
+  /**
+   * 桥接Obsidian事件到事件总线
+   * 将Obsidian的内置事件转发到事件总线系统
+   */
+  bridgeObsidianEvents(): void;
 } 

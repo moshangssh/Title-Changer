@@ -16,6 +16,8 @@ import { LinkTransformerService } from './services/LinkTransformerService';
 import { UpdateScheduler } from './services/UpdateSchedulerService';
 import { ErrorManagerService } from './services/ErrorManagerService';
 import { TitleStateAdapter } from './services/TitleStateAdapter';
+import { EventBusService } from './services/EventBusService';
+import { IEventBusService } from './types/ObsidianExtensions';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;
@@ -25,6 +27,7 @@ export class TitleChangerPlugin extends Plugin {
     private explorerView!: ExplorerView;
     private logger!: Logger;
     private titleStateAdapter!: TitleStateAdapter;
+    private eventBus!: IEventBusService;
 
     async onload() {
         // 加载设置
@@ -36,6 +39,11 @@ export class TitleChangerPlugin extends Plugin {
         // 获取Logger服务
         this.logger = this.container.get<Logger>(TYPES.Logger);
         this.logger.info('加载 Title Changer 插件');
+
+        // 初始化事件总线
+        this.eventBus = this.container.get<IEventBusService>(TYPES.EventBusService);
+        // 桥接Obsidian事件到事件总线
+        this.eventBus.bridgeObsidianEvents();
 
         // 加载样式
         this.loadStyles();
@@ -99,6 +107,11 @@ export class TitleChangerPlugin extends Plugin {
         // 移除样式
         const styleEl = document.getElementById('title-changer-folder-selector-styles');
         if (styleEl) styleEl.remove();
+        
+        // 取消所有事件订阅
+        if (this.eventBus) {
+            this.eventBus.unsubscribeAll();
+        }
         
         // 卸载视图管理器
         if (this.viewManager) {
@@ -179,6 +192,14 @@ export class TitleChangerPlugin extends Plugin {
      */
     getErrorManager(): ErrorManagerService {
         return this.container.get<ErrorManagerService>(TYPES.ErrorManager);
+    }
+
+    /**
+     * 获取事件总线实例
+     * @returns 事件总线实例
+     */
+    getEventBus(): IEventBusService {
+        return this.eventBus;
     }
 
     // 添加样式
