@@ -15,7 +15,7 @@ import { ExplorerEventsService } from './services/ExplorerEventsService';
 import { LinkTransformerService } from './services/LinkTransformerService';
 import { UpdateScheduler } from './services/UpdateSchedulerService';
 import { ErrorManagerService } from './services/ErrorManagerService';
-import { TitleStateService } from './services/TitleStateService';
+import { TitleStateAdapter } from './services/TitleStateAdapter';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;
@@ -24,7 +24,7 @@ export class TitleChangerPlugin extends Plugin {
     private linkTransformer!: LinkTransformerService;
     private explorerView!: ExplorerView;
     private logger!: Logger;
-    private titleStateService!: TitleStateService;
+    private titleStateAdapter!: TitleStateAdapter;
 
     async onload() {
         // 加载设置
@@ -45,9 +45,9 @@ export class TitleChangerPlugin extends Plugin {
         this.linkTransformer = this.container.get<LinkTransformerService>(TYPES.LinkTransformerService);
         this.linkTransformer.setSettings(this.settings);
         
-        // 初始化标题状态服务
-        this.titleStateService = this.container.get<TitleStateService>(TYPES.TitleStateService);
-        this.titleStateService.initialize();
+        // 初始化标题状态适配器
+        this.titleStateAdapter = this.container.get<TitleStateAdapter>(TYPES.TitleStateAdapter);
+        this.titleStateAdapter.initialize();
 
         // 初始化视图
         if (this.container.isBound(TYPES.ExplorerView)) {
@@ -110,9 +110,9 @@ export class TitleChangerPlugin extends Plugin {
             this.explorerView.unload();
         }
         
-        // 卸载标题状态服务
-        if (this.titleStateService) {
-            this.titleStateService.unload();
+        // 卸载标题状态适配器
+        if (this.titleStateAdapter) {
+            this.titleStateAdapter.unload();
         }
         
         // 清理所有计时器

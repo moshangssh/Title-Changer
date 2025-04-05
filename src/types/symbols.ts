@@ -28,6 +28,7 @@ export const TYPES = {
   FileService: Symbol.for("FileService"),
   TitleService: Symbol.for("TitleService"),
   TitleStateService: Symbol.for("TitleStateService"),
+  TitleStateAdapter: Symbol.for("TitleStateAdapter"),
   UpdateScheduler: Symbol.for("UpdateScheduler"),
   
   // 配置工厂

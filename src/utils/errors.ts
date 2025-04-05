@@ -24,6 +24,7 @@ export enum ErrorCategory {
   PERFORMANCE = 'PERFORMANCE', // 性能相关错误
   API = 'API',       // API调用错误
   VALIDATION = 'VALIDATION', // 数据验证错误
+  EVENT = 'EVENT',     // 事件处理错误
   UNKNOWN = 'UNKNOWN'     // 未知错误
 }
 

@@ -20,6 +20,21 @@ export interface EditorViewUpdate extends ViewUpdate {
 }
 
 /**
+ * 标题变更事件
+ */
+export interface TitleChangedEvent {
+    oldTitle: string;
+    newTitle: string;
+}
+
+// 扩展 Workspace 事件定义，添加自定义事件
+declare module 'obsidian' {
+    interface Workspace {
+        on(name: 'title-changed', callback: (data: TitleChangedEvent) => any): EventRef;
+    }
+}
+
+/**
  * 链接标题变更事件
  */
 export interface LinkTitleChangeEvent {
