@@ -15,6 +15,7 @@ export const TYPES = {
   EditorLinkView: Symbol.for("EditorLinkView"),
   ReadingView: Symbol.for("ReadingView"),
   GraphView: Symbol.for("GraphView"),
+  MarkdownViewManager: Symbol.for("MarkdownViewManager"),
 
   // 服务
   FileHandlerService: Symbol.for("FileHandlerService"),

@@ -5,6 +5,7 @@ import type { ExplorerView } from './ExplorerView';
 import type { EditorLinkView } from './EditorView';
 import type { ReadingView } from './ReadingView';
 import type { GraphView } from './GraphView';
+import type { MarkdownViewManager } from './MarkdownViewManager';
 import type { IViewManager } from '../types/ObsidianExtensions';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
@@ -25,6 +26,7 @@ export class ViewManager implements IViewManager {
     private editorLinkView: EditorLinkView;
     private readingView: ReadingView;
     private graphView: GraphView;
+    private markdownViewManager: MarkdownViewManager;
 
     /**
      * 构造函数
@@ -36,6 +38,7 @@ export class ViewManager implements IViewManager {
         @inject(TYPES.EditorLinkView) editorLinkView: EditorLinkView,
         @inject(TYPES.ReadingView) readingView: ReadingView,
         @inject(TYPES.GraphView) graphView: GraphView,
+        @inject(TYPES.MarkdownViewManager) markdownViewManager: MarkdownViewManager,
         @inject(TYPES.Logger) private logger: Logger,
         @inject(TYPES.ErrorManager) private errorManager: ErrorManagerService
     ) {
@@ -43,6 +46,7 @@ export class ViewManager implements IViewManager {
         this.editorLinkView = editorLinkView;
         this.readingView = readingView;
         this.graphView = graphView;
+        this.markdownViewManager = markdownViewManager;
     }
 
     /**
@@ -56,6 +60,11 @@ export class ViewManager implements IViewManager {
                 this.editorLinkView.initialize();
                 this.readingView.initialize();
                 this.graphView.initialize();
+                
+                // 初始化MarkdownViewManager
+                if (this.plugin.settings.enableMarkdownView) {
+                    this.markdownViewManager.initialize();
+                }
                 
                 this.logger.info('视图管理器初始化完成');
             },
@@ -157,6 +166,20 @@ export class ViewManager implements IViewManager {
                         category: ErrorCategory.UI,
                         level: ErrorLevel.WARNING,
                         details: { component: 'graphView' }
+                    }
+                );
+                
+                // 更新Markdown视图
+                tryCatchWrapper(
+                    () => this.markdownViewManager.updateView(),
+                    'ViewManager',
+                    this.errorManager,
+                    this.logger,
+                    {
+                        errorMessage: '更新Markdown视图失败',
+                        category: ErrorCategory.UI,
+                        level: ErrorLevel.WARNING,
+                        details: { component: 'markdownViewManager' }
                     }
                 );
                 
@@ -328,9 +351,7 @@ export class ViewManager implements IViewManager {
     }
 
     /**
-     * 根据ID获取视图实例
-     * @param viewId 视图ID
-     * @returns 对应的视图实例，若不存在则返回null
+     * 获取视图 - 帮助方法
      */
     private getViewById(viewId: string): any {
         switch (viewId) {
@@ -342,6 +363,8 @@ export class ViewManager implements IViewManager {
                 return this.readingView;
             case 'graph':
                 return this.graphView;
+            case 'markdown':
+                return this.markdownViewManager;
             default:
                 this.logger.debug(`未找到视图 ${viewId}`);
                 return null;

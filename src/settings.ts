@@ -128,6 +128,11 @@ export interface TitleChangerSettings {
      * 是否启用图表视图标题替换
      */
     enableGraphView: boolean;
+
+    /**
+     * 是否启用Markdown视图标题替换
+     */
+    enableMarkdownView: boolean;
     
     /**
      * 是否使用缓存
@@ -152,6 +157,7 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     enableReadingView: true,
     enableEditorLinkView: true,
     enableGraphView: true,
+    enableMarkdownView: true,
     useCache: true,
     cacheExpiration: 60,
     debugMode: false
@@ -278,6 +284,23 @@ export class TitleChangerSettingTab extends PluginSettingTab {
                         this.plugin.getViewManager().disableView('graph');
                     }
                     await this.plugin.saveSettings();
+                })
+            );
+            
+        new Setting(containerEl)
+            .setName('启用Markdown视图标题替换')
+            .setDesc('在Markdown编辑和阅读视图中替换标题显示')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableMarkdownView)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableMarkdownView = value;
+                    await this.plugin.saveSettings();
+                    
+                    if (value) {
+                        this.plugin.getViewManager().enableView('markdown');
+                    } else {
+                        this.plugin.getViewManager().disableView('markdown');
+                    }
                 })
             );
     }

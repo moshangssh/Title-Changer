@@ -14,6 +14,7 @@ import { UIStateManager } from "./services/UIStateManager";
 import { EditorLinkView } from "./views/EditorView";
 import { ReadingView } from "./views/ReadingView";
 import { GraphView } from "./views/GraphView";
+import { MarkdownViewManager } from "./views/MarkdownViewManager";
 import { GraphNodeReplacer } from "./utils/GraphNodeReplacer";
 import { ErrorManagerService } from "./services/ErrorManagerService";
 import { Logger } from "./utils/logger";
@@ -74,6 +75,7 @@ export function createContainer(
     container.bind(TYPES.EditorLinkView).to(EditorLinkView).inSingletonScope();
     container.bind(TYPES.ReadingView).to(ReadingView).inSingletonScope();
     container.bind(TYPES.GraphView).to(GraphView).inSingletonScope();
+    container.bind(TYPES.MarkdownViewManager).to(MarkdownViewManager).inSingletonScope();
 
     // 注册服务
     container.bind<IDOMSelectorService>(TYPES.DOMSelectorService).to(DOMSelectorService).inSingletonScope();
