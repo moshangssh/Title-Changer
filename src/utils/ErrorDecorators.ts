@@ -1,6 +1,6 @@
 import { ErrorCategory, TitleChangerError } from './Errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
-import { Logger } from './Logger';
+import { Logger } from './logger';
 import { convertToTitleChangerError, extractErrorDetails } from './ErrorHelpers';
 
 /**

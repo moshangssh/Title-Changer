@@ -1,6 +1,6 @@
 import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './Errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
-import { Logger } from './Logger';
+import { Logger } from './logger';
 
 /**
  * 同步操作的错误处理包装器

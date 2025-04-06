@@ -1,7 +1,7 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { TitleService } from '../services/TitleService';
-import { Logger } from './Logger';
+import { Logger } from './logger';
 import { App, WorkspaceLeaf } from 'obsidian';
 
 /**

@@ -2,7 +2,7 @@ import { TFile } from 'obsidian';
 import { TitleChangerSettings } from '../settings';
 import { ErrorCategory, RegexError } from './Errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
-import { Logger } from './Logger';
+import { Logger } from './logger';
 import { safeRegexCreation, safeRegexExecution } from './ErrorHelpers';
 
 export class TitleProcessor {
