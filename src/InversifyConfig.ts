@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { TYPES } from "./types/symbols";
 import { App, Vault } from "obsidian";
 import { TitleChangerPlugin } from "./main";
-import { TitleChangerSettings } from "./settings";
+import { TitleChangerSettings, DEFAULT_SETTINGS } from "./settings";
 import { CacheManager } from "./CacheManager";
 import { ViewManager } from "./views/ViewManager";
 import { FileHandlerService } from "./services/FileHandlerService";
@@ -43,7 +43,12 @@ export function createContainer(
     container.bind(TYPES.Plugin).toConstantValue(plugin);
     container.bind(TYPES.App).toConstantValue(plugin.app);
     container.bind(TYPES.Vault).toConstantValue(plugin.app.vault);
-    container.bind(TYPES.Settings).toConstantValue(plugin.settings);
+    
+    // 确保设置总是可用，即使是默认值
+    // 先检查是否已绑定，避免多次绑定
+    if (!container.isBound(TYPES.Settings)) {
+        container.bind(TYPES.Settings).toConstantValue(plugin.settings || DEFAULT_SETTINGS);
+    }
     
     // 应用预定义绑定（如果有）
     if (predefinedBindings) {

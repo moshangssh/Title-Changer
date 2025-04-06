@@ -1,5 +1,5 @@
 import { injectable, inject } from 'inversify';
-import { TitleChangerSettings } from '../settings';
+import { TitleChangerSettings, DEFAULT_SETTINGS } from '../settings';
 import { TYPES } from '../types/symbols';
 import { CacheManager } from '../CacheManager';
 import { TFile } from 'obsidian';
@@ -18,7 +18,7 @@ import { Logger } from '../utils/logger';
 
 @injectable()
 export class LinkTransformerService {
-    private settings!: TitleChangerSettings;
+    private settings: TitleChangerSettings = DEFAULT_SETTINGS;
 
     constructor(
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
@@ -75,13 +75,7 @@ export class LinkTransformerService {
                 return safeText;
             }
 
-            // 检查设置是否已初始化
-            if (!this.settings) {
-                this.logger.warn('设置尚未初始化', { text: safeText });
-                return safeText;
-            }
-
-            // 检查是否有正则表达式模式
+            // 检查正则表达式模式
             if (!this.settings.regexPattern || this.settings.regexPattern.trim() === '') {
                 return safeText;
             }

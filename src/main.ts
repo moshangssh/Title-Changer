@@ -52,6 +52,9 @@ export class TitleChangerPlugin extends Plugin {
         this.titleStateAdapter = this.container.get<TitleStateAdapter>(TYPES.TitleStateAdapter);
         this.eventBus = this.container.get<IEventBusService>(TYPES.EventBusService);
 
+        // 确保设置在容器初始化后立即应用到服务中
+        this.linkTransformer.setSettings(this.settings);
+
         // 加载样式
         this.loadStyles();
 
