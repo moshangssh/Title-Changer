@@ -197,7 +197,7 @@ export class TitleChangerPlugin extends Plugin {
      */
     refreshExplorerView(): void {
         if (this.explorerView) {
-            this.explorerView.immediateUpdate();
+            this.explorerView.updateView();
         }
     }
 
