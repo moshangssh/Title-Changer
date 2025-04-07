@@ -9,7 +9,7 @@ import type { IEventBusService } from '../types/ObsidianExtensions';
 import { EventType } from '../types/ObsidianExtensions';
 import type { ErrorManagerService } from '../services/ErrorManagerService';
 import { ErrorLevel } from '../services/ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 
 /**
  * Markdown视图管理器 - 负责管理Markdown文件标题显示

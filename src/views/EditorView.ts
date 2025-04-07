@@ -8,7 +8,7 @@ import type { TitleChangerPlugin } from '../main';
 import type { ExtendedWorkspace, EditorExtensionSymbol, IEditorExtensionManager } from '../types/ObsidianExtensions';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { 
     handleEditorOperation, 
     tryCatchWithValidation,

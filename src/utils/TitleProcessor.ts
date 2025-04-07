@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian';
 import { TitleChangerSettings } from '../settings';
-import { ErrorCategory, RegexError } from './Errors';
+import { ErrorCategory, RegexError } from './errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
 import { Logger } from './logger';
 import { safeRegexCreation, safeRegexExecution } from './ErrorHelpers';

@@ -1,6 +1,7 @@
 import { App, Plugin, Vault } from 'obsidian';
 import { Container } from 'inversify';
-import { TitleChangerSettings, DEFAULT_SETTINGS, TitleChangerSettingTab, FOLDER_SELECTOR_STYLES } from './settings';
+import { TitleChangerSettings, DEFAULT_SETTINGS } from './settings/TitleChangerSettings';
+import { TitleChangerSettingTab } from './settings/SettingTab';
 import { ViewManager } from './views/ViewManager';
 import { CacheManager } from './CacheManager';
 import { TYPES } from './types/symbols';
@@ -135,7 +136,7 @@ export class TitleChangerPlugin extends Plugin {
         this.logger.info('卸载 Title Changer 插件');
         
         // 移除样式
-        const styleEl = document.getElementById('title-changer-folder-selector-styles');
+        const styleEl = document.getElementById('title-changer-styles');
         if (styleEl) styleEl.remove();
         
         // 取消所有事件订阅
@@ -234,10 +235,109 @@ export class TitleChangerPlugin extends Plugin {
 
     // 添加样式
     private loadStyles() {
-        // 添加文件夹选择器样式
-        document.head.createEl('style', {
-            attr: { id: 'title-changer-folder-selector-styles' },
-            text: FOLDER_SELECTOR_STYLES
+        // 添加样式元素
+        const styleEl = document.head.createEl('style', {
+            attr: { id: 'title-changer-styles' }
         });
+        
+        // 设置CSS内容
+        styleEl.textContent = `
+        .title-changer-folder-selector {
+            margin-top: 8px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+        
+        .title-changer-folder-selector .search-container {
+            position: relative;
+            margin-bottom: 12px;
+        }
+        
+        .title-changer-folder-selector .search-container input {
+            width: 100%;
+            padding: 8px 12px 8px 32px;
+            border-radius: 4px;
+            border: 1px solid var(--background-modifier-border);
+            background-color: var(--background-primary);
+        }
+        
+        .title-changer-folder-selector .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        
+        .title-changer-folder-selector .suggestions-container {
+            position: absolute;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--background-modifier-border);
+            border-radius: 4px;
+            background-color: var(--background-primary);
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .title-changer-folder-selector .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        
+        .title-changer-folder-selector .suggestion-item:hover {
+            background-color: var(--background-secondary);
+        }
+        
+        .title-changer-folder-selector .suggestion-item.custom {
+            font-style: italic;
+            color: var(--text-accent);
+        }
+        
+        .title-changer-folder-selector .no-suggestions {
+            padding: 8px 12px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .title-changer-folder-selector .folder-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .title-changer-folder-selector .folder-item {
+            display: flex;
+            align-items: center;
+            background-color: var(--background-secondary);
+            border-radius: 4px;
+            padding: 4px 8px;
+        }
+        
+        .title-changer-folder-selector .folder-name {
+            margin-right: 4px;
+        }
+        
+        .title-changer-folder-selector .remove-button {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: bold;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .title-changer-folder-selector .remove-button:hover {
+            color: var(--text-error);
+        }
+        
+        .title-changer-folder-selector .empty-message {
+            color: var(--text-muted);
+            font-style: italic;
+        }`;
     }
 } 

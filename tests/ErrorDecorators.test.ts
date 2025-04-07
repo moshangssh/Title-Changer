@@ -1,5 +1,5 @@
 import { ErrorHandled, AsyncErrorHandled, ClassErrorHandled, ErrorHandlerOptions, ErrorHandler } from '../src/utils/ErrorDecorators';
-import { ErrorCategory, TitleChangerError } from '../src/utils/Errors';
+import { ErrorCategory, TitleChangerError } from '../src/utils/errors';
 import { ErrorLevel, ErrorManagerService } from '../src/services/ErrorManagerService';
 import { Logger } from '../src/utils/logger';
 

@@ -5,7 +5,7 @@ import { FileService } from './FileService';
 import { CacheManager } from '../CacheManager';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { ErrorHandled, AsyncErrorHandled } from '../utils/ErrorDecorators';
 import { TitleChangedEvent } from '../types/ObsidianExtensions';
 

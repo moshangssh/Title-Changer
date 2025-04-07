@@ -4,7 +4,7 @@ import { TYPES } from '../types/symbols';
 import type { TitleChangerPlugin } from '../main';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';
 
 /**

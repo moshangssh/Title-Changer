@@ -1,4 +1,4 @@
-import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './Errors';
+import { ErrorCategory, TitleChangerError, DataError, EditorError, ValidationError } from './errors';
 import { ErrorLevel, ErrorManagerService } from '../services/ErrorManagerService';
 import { Logger } from './logger';
 

@@ -9,7 +9,7 @@ import type {
 } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { Logger } from '../utils/logger';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { tryCatchWrapper, handleEditorOperation } from '../utils/ErrorHelpers';
 
 /**

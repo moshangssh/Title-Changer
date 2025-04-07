@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { TYPES } from "./types/symbols";
 import { App, Vault } from "obsidian";
 import { TitleChangerPlugin } from "./main";
-import { TitleChangerSettings, DEFAULT_SETTINGS } from "./settings";
+import { TitleChangerSettings, DEFAULT_SETTINGS } from "./settings/TitleChangerSettings";
 import { CacheManager } from "./CacheManager";
 import { ViewManager } from "./views/ViewManager";
 import { FileHandlerService } from "./services/FileHandlerService";
@@ -27,6 +27,7 @@ import { UpdateScheduler } from "./services/UpdateSchedulerService";
 import { SelectorFactory } from "./config/selectors";
 import { TitleStateAdapter } from "./services/TitleStateAdapter";
 import { EventBusService } from "./services/EventBusService";
+import { SettingsManager } from "./settings/SettingsManager";
 
 /**
  * 创建并配置IOC容器
@@ -69,6 +70,7 @@ export function createContainer(
     container.bind<ICacheManager>(TYPES.CacheManager).to(CacheManager).inSingletonScope();
     container.bind<IViewManager>(TYPES.ViewManager).to(ViewManager).inSingletonScope();
     container.bind(TYPES.ErrorManager).to(ErrorManagerService).inSingletonScope();
+    container.bind(TYPES.SettingsManager).to(SettingsManager).inSingletonScope();
 
     // 注册视图
     container.bind(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();

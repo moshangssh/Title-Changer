@@ -8,7 +8,7 @@ import {
     IEventBusService 
 } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory, EventError } from '../utils/Errors';
+import { ErrorCategory, EventError } from '../utils/errors';
 import { Logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -1,5 +1,5 @@
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
-import { ErrorCategory } from './Errors';
+import { ErrorCategory } from './errors';
 import { Logger } from './logger';
 import { tryCatchWrapper, logErrorsWithoutThrowing } from './ErrorHelpers';
 

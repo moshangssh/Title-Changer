@@ -4,7 +4,7 @@ import type { TitleChangerPlugin } from '../../main';
 import { Logger } from '../../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
 import { tryCatchWrapper } from '../../utils/ErrorHelpers';
-import { ErrorCategory } from '../../utils/Errors';
+import { ErrorCategory } from '../../utils/errors';
 
 /**
  * 视图组件的抽象基类

@@ -5,7 +5,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import type { ErrorManagerService } from './ErrorManagerService';
 import { ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { 
   convertToTitleChangerError, 
   tryCatchWrapper, 

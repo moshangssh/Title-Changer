@@ -7,7 +7,7 @@ import { TitleProcessor } from './utils/TitleProcessor';
 import type { ICacheManager } from './types/ObsidianExtensions';
 import { Logger } from './utils/logger';
 import { ErrorManagerService } from './services/ErrorManagerService';
-import { ErrorCategory } from './utils/Errors';
+import { ErrorCategory } from './utils/errors';
 import { tryCatchWrapper } from './utils/ErrorHelpers';
 
 /**

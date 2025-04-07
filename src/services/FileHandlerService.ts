@@ -6,7 +6,7 @@ import type { UIStateManager } from './UIStateManager';
 import { DOMSelectorService } from './DomSelectorService';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { tryCatchWrapper, handleDataOperation, validateData, tryCatchWithValidation } from '../utils/ErrorHelpers';
 import { ErrorHandled, AsyncErrorHandled } from '../utils/ErrorDecorators';
 

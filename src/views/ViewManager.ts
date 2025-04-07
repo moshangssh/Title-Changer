@@ -9,7 +9,7 @@ import type { MarkdownViewManager } from './MarkdownViewManager';
 import type { IViewManager } from '../types/ObsidianExtensions';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from '../services/ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { 
     tryCatchWrapper, 
     handleEditorOperation,

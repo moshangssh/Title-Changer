@@ -4,7 +4,7 @@
 import { StateField, StateEffect, Extension, EditorState } from '@codemirror/state';
 import { ErrorManagerService, ErrorLevel } from '../../services/ErrorManagerService';
 import { Logger } from '../../utils/logger';
-import { ErrorCategory } from '../../utils/Errors';
+import { ErrorCategory } from '../../utils/errors';
 import { tryCatchWrapper } from '../../utils/ErrorHelpers';
 
 /**

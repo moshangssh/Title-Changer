@@ -2,7 +2,7 @@ import { TFile, WorkspaceLeaf, View } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { IDOMSelectorService } from '../types/ObsidianExtensions';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory, UIError } from '../utils/Errors';
+import { ErrorCategory, UIError } from '../utils/errors';
 import { tryCatchWrapper, handleSpecificErrors, convertToTitleChangerError, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
 import { Logger } from '../utils/logger';
 import { TYPES } from '../types/symbols';

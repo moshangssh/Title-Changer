@@ -8,7 +8,7 @@ import { TitleService } from '../services/TitleService';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';
 import type { TitleChangerPlugin } from '../main';
 import type { GraphNodeReplacer } from '../utils/GraphNodeReplacer';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import type { TitleChangerSettings } from '../settings';
 import { EventType } from '../types/ObsidianExtensions';
 import { App } from 'obsidian';

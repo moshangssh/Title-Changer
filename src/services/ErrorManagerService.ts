@@ -2,7 +2,7 @@ import { App, Notice } from 'obsidian';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types/symbols';
 import { TitleChangerPlugin } from '../main';
-import { ErrorCategory, TitleChangerError } from '../utils/Errors';
+import { ErrorCategory, TitleChangerError } from '../utils/errors';
 
 export enum ErrorLevel {
     DEBUG = 0,

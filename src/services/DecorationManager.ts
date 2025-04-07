@@ -7,7 +7,7 @@ import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
 import { LinkTitleWidget } from '../components/widgets/LinkTitleWidget';
 import { extractSimpleWikiLinks, shouldReplaceTitle } from '../utils/WikiLinkProcessor';
 import { tryCatchWrapper, logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
-import { ErrorCategory, DecorationError } from '../utils/Errors';
+import { ErrorCategory, DecorationError } from '../utils/errors';
 import { Logger } from '../utils/logger';
 
 @injectable()

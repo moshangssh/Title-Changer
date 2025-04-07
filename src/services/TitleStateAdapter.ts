@@ -7,7 +7,7 @@ import { EditorState, StateEffect } from '@codemirror/state';
 import { TYPES } from '../types/symbols';
 import { Logger } from '../utils/logger';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory } from '../utils/Errors';
+import { ErrorCategory } from '../utils/errors';
 import { tryCatchWrapper } from '../utils/ErrorHelpers';
 import { createTitleStateExtension, TitleStateField, TitleChangeInfo } from '../components/extensions/TitleStateExtension';
 import { getEditorView } from '../utils/EditorUtils';

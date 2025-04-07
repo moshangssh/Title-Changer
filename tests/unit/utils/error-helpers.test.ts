@@ -14,7 +14,7 @@ import {
     handleEditorOperation,
     handleDataOperation
 } from '../../../src/utils/ErrorHelpers';
-import { ErrorCategory, TitleChangerError } from '../../../src/utils/Errors';
+import { ErrorCategory, TitleChangerError } from '../../../src/utils/errors';
 import { ErrorLevel } from '../../../src/services/ErrorManagerService';
 
 // 模拟依赖

@@ -4,7 +4,7 @@ import { TYPES } from '../types/symbols';
 import { CacheManager } from '../CacheManager';
 import { TFile } from 'obsidian';
 import { ErrorManagerService, ErrorLevel } from './ErrorManagerService';
-import { ErrorCategory, RegexError, ValidationError } from '../utils/Errors';
+import { ErrorCategory, RegexError, ValidationError } from '../utils/errors';
 import { 
     convertToTitleChangerError, 
     logErrorsWithoutThrowing, 
