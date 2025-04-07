@@ -26,6 +26,11 @@ export class ExplorerEventsService {
     private scrollEventListeners: Array<{element: HTMLElement, listener: EventListener}> = [];
     private viewportObserver: IntersectionObserver | null = null;
     private subscriptionIds: string[] = [];
+    private domObserverRetryTimeout: number | null = null;
+    private domObserverRetryCount: number = 0;
+    private readonly MAX_RETRY_COUNT: number = 10;
+    private readonly RETRY_DELAY_MS: number = 1000; // 1秒
+    private isRegistering: boolean = false;
 
     constructor(
         @inject(TYPES.App) private app: App,
@@ -293,10 +298,58 @@ export class ExplorerEventsService {
      */
     public registerDOMObserver(updateCallback: () => void): void {
         try {
-            const explorers = this.domSelector.getFileExplorers();
-            if (!explorers || explorers.length === 0) {
-                this.logger.warn('未找到文件浏览器元素，DOM观察器未注册');
+            if (this.isRegistering) {
                 return;
+            }
+            
+            this.isRegistering = true;
+            this.domObserverRetryCount = 0;
+            
+            this.retryRegisterDOMObserver(updateCallback);
+        } catch (error) {
+            this.isRegistering = false;
+            this.errorManager.handleError(
+                new EventError('注册DOM观察器失败', {
+                    sourceComponent: this.constructor.name,
+                    details: {
+                        updateCallbackProvided: !!updateCallback,
+                        error
+                    },
+                    userVisible: false
+                }),
+                ErrorLevel.ERROR
+            );
+        }
+    }
+    
+    /**
+     * 重试注册DOM观察器
+     * @param updateCallback 更新回调函数
+     */
+    private retryRegisterDOMObserver(updateCallback: () => void): void {
+        try {
+            const explorers = this.domSelector.getFileExplorers();
+            
+            if (!explorers || explorers.length === 0) {
+                this.domObserverRetryCount++;
+                
+                if (this.domObserverRetryCount <= this.MAX_RETRY_COUNT) {
+                    this.logger.debug(`未找到文件浏览器元素，将在${this.RETRY_DELAY_MS}ms后重试 (${this.domObserverRetryCount}/${this.MAX_RETRY_COUNT})`);
+                    
+                    if (this.domObserverRetryTimeout !== null) {
+                        window.clearTimeout(this.domObserverRetryTimeout);
+                    }
+                    
+                    this.domObserverRetryTimeout = window.setTimeout(() => {
+                        this.retryRegisterDOMObserver(updateCallback);
+                    }, this.RETRY_DELAY_MS);
+                    
+                    return;
+                } else {
+                    this.isRegistering = false;
+                    this.logger.warn(`未找到文件浏览器元素，DOM观察器未注册 (已重试${this.MAX_RETRY_COUNT}次)`);
+                    return;
+                }
             }
             
             const observer = new MutationObserver((mutations) => {
@@ -310,7 +363,6 @@ export class ExplorerEventsService {
                 });
             });
 
-            // 为每个浏览器元素注册观察器
             explorers.forEach(explorer => {
                 observer.observe(explorer, {
                     childList: true,
@@ -322,18 +374,27 @@ export class ExplorerEventsService {
             });
 
             this.observers.push(observer);
-            this.logger.debug('已注册DOM观察器');
+            this.isRegistering = false;
+            this.logger.debug(`已成功注册DOM观察器，监听了${explorers.length}个文件浏览器元素`);
+            
+            if (this.domObserverRetryCount > 0) {
+                this.logger.info(`在第${this.domObserverRetryCount}次重试后成功注册DOM观察器`);
+            }
+            
+            this.domObserverRetryCount = 0;
         } catch (error) {
+            this.isRegistering = false;
             this.errorManager.handleError(
-                new EventError('注册DOM观察器失败', {
+                new EventError('重试注册DOM观察器失败', {
                     sourceComponent: this.constructor.name,
                     details: {
+                        retryCount: this.domObserverRetryCount,
                         updateCallbackProvided: !!updateCallback,
                         error
                     },
                     userVisible: false
                 }),
-                ErrorLevel.ERROR
+                ErrorLevel.WARNING
             );
         }
     }
@@ -363,25 +424,29 @@ export class ExplorerEventsService {
      */
     unregisterAll(): void {
         try {
-            // 注销DOM观察器
+            if (this.domObserverRetryTimeout !== null) {
+                window.clearTimeout(this.domObserverRetryTimeout);
+                this.domObserverRetryTimeout = null;
+            }
+            
+            this.isRegistering = false;
+            this.domObserverRetryCount = 0;
+            
             if (this.observers.length > 0) {
                 this.observers.forEach(observer => observer.disconnect());
                 this.observers = [];
             }
 
-            // 移除滚动事件监听器
             this.scrollEventListeners.forEach(({element, listener}) => {
                 element.removeEventListener('scroll', listener);
             });
             this.scrollEventListeners = [];
 
-            // 注销视口观察器
             if (this.viewportObserver) {
                 this.viewportObserver.disconnect();
                 this.viewportObserver = null;
             }
 
-            // 取消事件总线订阅
             this.subscriptionIds.forEach(id => {
                 this.eventBus.unsubscribe(id);
             });
