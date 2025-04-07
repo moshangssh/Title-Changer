@@ -9,6 +9,7 @@ export const TYPES = {
   CacheManager: Symbol.for("CacheManager"),
   ViewManager: Symbol.for("ViewManager"),
   ErrorManager: Symbol.for("ErrorManager"),
+  SettingsManager: Symbol.for("SettingsManager"),
 
   // 视图
   ExplorerView: Symbol.for("ExplorerView"),
