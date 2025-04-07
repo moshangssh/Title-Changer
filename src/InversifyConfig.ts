@@ -28,6 +28,10 @@ import { SelectorFactory } from "./config/selectors";
 import { TitleStateAdapter } from "./services/TitleStateAdapter";
 import { EventBusService } from "./services/EventBusService";
 import { SettingsManager } from "./settings/SettingsManager";
+import { VirtualScrollManager } from "./managers/VirtualScrollManager";
+import { DOMObserverManager } from "./managers/DOMObserverManager";
+import { UpdateCoordinator } from "./managers/UpdateCoordinator";
+import { FileItemProcessor } from "./managers/FileItemProcessor";
 
 /**
  * 创建并配置IOC容器
@@ -71,6 +75,10 @@ export function createContainer(
     container.bind<IViewManager>(TYPES.ViewManager).to(ViewManager).inSingletonScope();
     container.bind(TYPES.ErrorManager).to(ErrorManagerService).inSingletonScope();
     container.bind(TYPES.SettingsManager).to(SettingsManager).inSingletonScope();
+    container.bind(TYPES.VirtualScrollManager).to(VirtualScrollManager).inSingletonScope();
+    container.bind(TYPES.DOMObserverManager).to(DOMObserverManager).inSingletonScope();
+    container.bind(TYPES.UpdateCoordinator).to(UpdateCoordinator).inSingletonScope();
+    container.bind(TYPES.FileItemProcessor).to(FileItemProcessor).inSingletonScope();
 
     // 注册视图
     container.bind(TYPES.ExplorerView).to(ExplorerView).inSingletonScope();

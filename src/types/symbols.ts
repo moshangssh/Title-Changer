@@ -10,6 +10,10 @@ export const TYPES = {
   ViewManager: Symbol.for("ViewManager"),
   ErrorManager: Symbol.for("ErrorManager"),
   SettingsManager: Symbol.for("SettingsManager"),
+  VirtualScrollManager: Symbol.for("VirtualScrollManager"),
+  DOMObserverManager: Symbol.for("DOMObserverManager"),
+  UpdateCoordinator: Symbol.for("UpdateCoordinator"),
+  FileItemProcessor: Symbol.for("FileItemProcessor"),
 
   // 视图
   ExplorerView: Symbol.for("ExplorerView"),
