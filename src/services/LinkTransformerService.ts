@@ -8,17 +8,20 @@ import { ErrorCategory, RegexError, ValidationError } from '../utils/errors';
 import { 
     convertToTitleChangerError, 
     logErrorsWithoutThrowing, 
-    safeRegexCreation, 
-    safeRegexExecution, 
     validateData, 
     tryCatchWithValidation,
     ErrorHandler
 } from '../utils/ErrorHelpers';
+// 导入新的正则表达式辅助函数
+import { createSafeRegex, executeSafeRegex, ErrorType, ErrorSeverity, getRegexErrorDescription, reportError } from '../utils/RegexHelper';
 import { Logger } from '../utils/logger';
 
 @injectable()
 export class LinkTransformerService {
     private settings: TitleChangerSettings = DEFAULT_SETTINGS;
+    // 添加正则表达式缓存
+    private cachedRegex: RegExp | null = null;
+    private cachedPattern: string = '';
 
     constructor(
         @inject(TYPES.CacheManager) private cacheManager: CacheManager,
@@ -39,6 +42,9 @@ export class LinkTransformerService {
                     this.constructor.name
                 );
                 this.settings = settings;
+                // 清除缓存的正则表达式，以便在下次需要时重新创建
+                this.cachedRegex = null;
+                this.cachedPattern = '';
                 return true;
             },
             (result) => result === true,
@@ -54,6 +60,44 @@ export class LinkTransformerService {
                 userVisible: true
             }
         );
+    }
+
+    /**
+     * 获取缓存的正则表达式或创建新正则表达式
+     * @returns 正则表达式对象或null
+     */
+    private getRegex(): RegExp | null {
+        // 如果模式已更改或尚未缓存，则创建新的正则表达式
+        if (this.settings.regexPattern !== this.cachedPattern) {
+            const result = createSafeRegex(this.settings.regexPattern, '');
+            this.cachedRegex = result.regex;
+            this.cachedPattern = this.settings.regexPattern;
+            
+            // 如果正则表达式无效，记录错误但不中断运行
+            if (result.error) {
+                // 使用新的错误报告机制
+                const friendlyError = getRegexErrorDescription(this.settings.regexPattern, result.error);
+                
+                // 报告错误
+                reportError(
+                    ErrorType.REGEX_SYNTAX, 
+                    `正则表达式语法错误: ${friendlyError}`, 
+                    ErrorSeverity.WARNING,
+                    { 
+                        pattern: this.settings.regexPattern,
+                        component: 'LinkTransformerService'
+                    }
+                );
+                
+                // 同时保持日志记录
+                this.logger.warn('正则表达式无效', { 
+                    pattern: this.settings.regexPattern,
+                    error: friendlyError
+                });
+            }
+        }
+        
+        return this.cachedRegex;
     }
 
     /**
@@ -80,51 +124,55 @@ export class LinkTransformerService {
                 return safeText;
             }
 
-            // 使用安全的正则表达式创建
-            const regex = safeRegexCreation(
-                this.settings.regexPattern,
-                '',
-                this.constructor.name,
-                this.errorManager,
-                this.logger
-            );
+            // 使用缓存的正则表达式
+            const regex = this.getRegex();
             
             if (regex) {
-                // 使用安全的正则表达式执行
-                const match = safeRegexExecution(
-                    regex,
-                    safeText,
-                    this.constructor.name,
-                    this.errorManager,
-                    this.logger
-                );
+                // 使用新的安全正则表达式执行函数
+                const result = executeSafeRegex(regex, safeText);
                 
-                if (match && match.length > 1) {
-                    const result = match[1].trim(); // 返回第一个捕获组并清理空白
-                    return result || safeText; // 确保不返回空字符串
+                // 处理可能的执行错误
+                if (result.error) {
+                    reportError(
+                        ErrorType.REGEX_EXECUTION, 
+                        `正则表达式执行错误: ${result.error}`,
+                        ErrorSeverity.WARNING, 
+                        { 
+                            pattern: this.settings.regexPattern,
+                            input: safeText.substring(0, 20) // 仅记录前20个字符以防文本过长
+                        }
+                    );
+                    this.logger.warn('正则表达式执行错误', {
+                        pattern: this.settings.regexPattern,
+                        text: safeText.substring(0, 20),
+                        error: result.error
+                    });
+                }
+                
+                if (result.matches && result.matches.length > 1) {
+                    const matchResult = result.matches[1].trim(); // 返回第一个捕获组并清理空白
+                    return matchResult || safeText; // 确保不返回空字符串
                 }
             }
 
             // 回退到简单的前缀移除模式
-            const fallbackRegex = safeRegexCreation(
-                'AIGC_\\d{4}_\\d{2}_\\d{2}_(.+)',
-                '',
-                this.constructor.name,
-                this.errorManager,
-                this.logger
-            );
+            const fallbackResult = createSafeRegex('AIGC_\\d{4}_\\d{2}_\\d{2}_(.+)', '');
+            const fallbackRegex = fallbackResult.regex;
             
             if (fallbackRegex) {
-                const fallbackMatch = safeRegexExecution(
-                    fallbackRegex,
-                    safeText,
-                    this.constructor.name,
-                    this.errorManager,
-                    this.logger
-                );
+                const fallbackExecResult = executeSafeRegex(fallbackRegex, safeText);
                 
-                if (fallbackMatch && fallbackMatch.length > 1) {
-                    const result = fallbackMatch[1].trim();
+                // 只记录回退模式错误，不影响正常流程
+                if (fallbackExecResult.error) {
+                    this.logger.debug('回退正则表达式执行错误', {
+                        pattern: 'AIGC_\\d{4}_\\d{2}_\\d{2}_(.+)',
+                        text: safeText.substring(0, 20),
+                        error: fallbackExecResult.error
+                    });
+                }
+                
+                if (fallbackExecResult.matches && fallbackExecResult.matches.length > 1) {
+                    const result = fallbackExecResult.matches[1].trim();
                     return result || safeText;
                 }
             }
@@ -217,5 +265,65 @@ export class LinkTransformerService {
             // 标记为已处理
             linkElement.setAttribute('data-title-processed', 'true');
         }
+    }
+
+    private transformFileLink(originalName: string): string | null {
+        // 获取缓存的正则表达式
+        const regex = this.getRegex();
+        if (!regex) {
+            // 当无法创建正则表达式时，使用原始文件名
+            return originalName;
+        }
+        
+        // 执行正则表达式
+        const result = executeSafeRegex(regex, originalName);
+        
+        // 如果执行出错，记录错误并使用原始名称
+        if (result.error) {
+            reportError(
+                ErrorType.REGEX_EXECUTION, 
+                `正则表达式执行错误: ${result.error}`, 
+                ErrorSeverity.WARNING, 
+                { 
+                    pattern: this.settings.regexPattern, 
+                    input: originalName,
+                    component: 'LinkTransformerService'
+                }
+            );
+            return originalName;
+        }
+        
+        // 如果没有匹配或没有捕获组
+        if (!result.matches || result.matches.length <= 1) {
+            // 检查是否是没有捕获组的问题
+            if (result.matches && result.matches.length === 1) {
+                reportError(
+                    ErrorType.REGEX_NO_CAPTURE,
+                    '正则表达式未包含捕获组，请使用()括号来捕获要显示的部分', 
+                    ErrorSeverity.WARNING,
+                    { 
+                        pattern: this.settings.regexPattern, 
+                        input: originalName,
+                        component: 'LinkTransformerService'
+                    }
+                );
+            } else {
+                // 没有匹配
+                reportError(
+                    ErrorType.REGEX_NO_MATCH,
+                    '正则表达式没有匹配到内容', 
+                    ErrorSeverity.INFO,
+                    { 
+                        pattern: this.settings.regexPattern, 
+                        input: originalName,
+                        component: 'LinkTransformerService'
+                    }
+                );
+            }
+            return originalName;
+        }
+        
+        // 返回第一个捕获组
+        return result.matches[1];
     }
 } 

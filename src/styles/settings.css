@@ -95,4 +95,120 @@
 .title-changer-folder-selector .empty-message {
     color: var(--text-muted);
     font-style: italic;
+}
+
+/* 设置界面样式 */
+
+/* 正则表达式设置相关样式 */
+.regex-error {
+    color: var(--text-error);
+    margin-top: 8px;
+    font-size: 0.85em;
+}
+
+.regex-warning {
+    color: var(--text-warning, orange);
+    margin-top: 8px;
+    font-size: 0.85em;
+}
+
+.regex-test-container {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: var(--background-primary-alt);
+}
+
+.regex-test-result-container {
+    margin-top: 10px;
+}
+
+.regex-test-result {
+    padding: 10px;
+    margin-top: 5px;
+    background-color: var(--background-secondary);
+    border-radius: 5px;
+    font-family: var(--font-monospace);
+}
+
+/* 测试结果状态样式 */
+.regex-test-result.success {
+    border-left: 3px solid var(--text-success, #50fa7b);
+}
+
+.regex-test-result.warning {
+    border-left: 3px solid var(--text-warning, #ffb86c);
+}
+
+.regex-test-result.error {
+    border-left: 3px solid var(--text-error);
+}
+
+/* 测试详情样式 */
+.test-success {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-success, #50fa7b);
+    font-weight: bold;
+}
+
+.test-warning {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-warning, #ffb86c);
+    font-weight: bold;
+}
+
+.test-error {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-error);
+    font-weight: bold;
+}
+
+.test-details {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--background-modifier-border);
+}
+
+.test-item {
+    margin-bottom: 5px;
+}
+
+.test-label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.test-value {
+    word-break: break-all;
+}
+
+.result-highlight {
+    font-weight: bold;
+    color: var(--text-accent);
+    background-color: var(--background-modifier-success);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.test-example {
+    margin-top: 8px;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.test-example code {
+    background-color: var(--background-primary);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: var(--font-monospace);
+}
+
+/* 确保错误信息与输入框样式匹配 */
+.setting-item .regex-error,
+.setting-item .regex-warning {
+    padding-left: var(--size-4-4);
 } 

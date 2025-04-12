@@ -242,6 +242,7 @@ export class TitleChangerPlugin extends Plugin {
         
         // 设置CSS内容
         styleEl.textContent = `
+        /* 文件夹选择器样式 */
         .title-changer-folder-selector {
             margin-top: 8px;
             margin-bottom: 24px;
@@ -338,6 +339,38 @@ export class TitleChangerPlugin extends Plugin {
         .title-changer-folder-selector .empty-message {
             color: var(--text-muted);
             font-style: italic;
+        }
+        
+        /* 正则表达式设置相关样式 */
+        .regex-error {
+            color: var(--text-error);
+            margin-top: 8px;
+            font-size: 0.85em;
+        }
+        
+        .regex-test-container {
+            margin-top: 16px;
+            padding: 12px;
+            border: 1px solid var(--background-modifier-border);
+            border-radius: 6px;
+            background-color: var(--background-primary-alt);
+        }
+        
+        .regex-test-result-container {
+            margin-top: 10px;
+        }
+        
+        .regex-test-result {
+            padding: 10px;
+            margin-top: 5px;
+            background-color: var(--background-secondary);
+            border-radius: 5px;
+            font-family: var(--font-monospace);
+        }
+        
+        /* 确保错误信息与输入框样式匹配 */
+        .setting-item .regex-error {
+            padding-left: var(--size-4-4);
         }`;
     }
 } 
