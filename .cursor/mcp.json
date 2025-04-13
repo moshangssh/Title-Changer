@@ -6,6 +6,10 @@
       "env": {
         "TAVILY_API_KEY": "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"
       }
+    },
+    "codelf": {
+      "command": "npx",
+      "args": ["codelf"]
     }
   }
 }
