@@ -107,7 +107,7 @@
 }
 
 .regex-warning {
-    color: var(--text-warning, orange);
+    color: var(--interactive-warning);
     margin-top: 8px;
     font-size: 0.85em;
 }
@@ -134,11 +134,11 @@
 
 /* 测试结果状态样式 */
 .regex-test-result.success {
-    border-left: 3px solid var(--text-success, #50fa7b);
+    border-left: 3px solid var(--interactive-success);
 }
 
 .regex-test-result.warning {
-    border-left: 3px solid var(--text-warning, #ffb86c);
+    border-left: 3px solid var(--interactive-warning);
 }
 
 .regex-test-result.error {
@@ -149,14 +149,14 @@
 .test-success {
     display: block;
     margin-bottom: 10px;
-    color: var(--text-success, #50fa7b);
+    color: var(--interactive-success);
     font-weight: bold;
 }
 
 .test-warning {
     display: block;
     margin-bottom: 10px;
-    color: var(--text-warning, #ffb86c);
+    color: var(--interactive-warning);
     font-weight: bold;
 }
 
