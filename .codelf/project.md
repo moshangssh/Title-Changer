@@ -1,6 +1,6 @@
 ## Title Changer
 > 该项目使用的技术、工具库及其对应的依赖版本如下：
-> TypeScript(4.7.4)、Obsidian API(latest)、InversifyJS(7.2.0)、Jest(29.7.0)、Reflect-metadata(0.2.2)、UUID(11.1.0)
+> TypeScript(4.7.4)、Obsidian API(latest)、InversifyJS(7.2.0)、Jest(29.7.0)、Reflect-metadata(0.2.2)、UUID(11.1.0)、ts-node(10.9.2)
 
 
 ## 项目结构
@@ -39,10 +39,16 @@ Title-Changer/
 │   ├── main.ts          # 插件入口文件，包含插件生命周期管理
 │   └── CacheManager.ts  # 缓存管理器实现，提高性能
 ├── tests/              # 测试目录
-│   └── unit/           # 单元测试文件
-│       └── utils/      # 工具类测试
-│           ├── LRUCache.test.ts # 基础LRU缓存测试
-│           └── EnhancedLRUCache.test.ts # 增强型LRU缓存测试
+│   ├── unit/           # 单元测试文件
+│   │   └── utils/      # 工具类测试
+│   │       ├── LRUCache.test.ts # 基础LRU缓存测试
+│   │       └── EnhancedLRUCache.test.ts # 增强型LRU缓存测试
+│   └── benchmark/      # 性能基准测试目录
+│       ├── LRUCacheBenchmark.ts # LRU缓存基准测试实现
+│       ├── TitleCacheBenchmark.ts # 标题缓存应用场景测试
+│       ├── ResultProcessor.ts # 测试结果处理和分析工具
+│       ├── index.ts # 基准测试入口文件
+│       └── results/ # 测试结果和报告存储目录
 ├── docs/               # 文档目录
 │   ├── api/            # API文档
 │   ├── usage/          # 使用指南
