@@ -20,7 +20,11 @@ Title-Changer/
 │   ├── utils/           # 工具函数和辅助方法
 │   │   ├── DOMUtils.ts  # DOM操作辅助函数
 │   │   ├── FileUtils.ts # 文件处理辅助函数
-│   │   └── RegexUtils.ts # 正则表达式处理工具
+│   │   ├── RegexUtils.ts # 正则表达式处理工具
+│   │   ├── LRUCache.ts  # 基础LRU缓存实现（Map结构）
+│   │   ├── LRUCacheBase.ts # LRU缓存基础接口定义
+│   │   ├── EnhancedLRUCache.ts # 增强型LRU缓存实现（双向链表+Map结构）
+│   │   └── LRUCacheFactory.ts # LRU缓存工厂类
 │   ├── components/      # UI组件和视图相关逻辑
 │   │   └── modals/      # 对话框和弹窗组件
 │   ├── managers/        # 管理器类，如缓存管理器等
@@ -36,9 +40,14 @@ Title-Changer/
 │   └── CacheManager.ts  # 缓存管理器实现，提高性能
 ├── tests/              # 测试目录
 │   └── unit/           # 单元测试文件
+│       └── utils/      # 工具类测试
+│           ├── LRUCache.test.ts # 基础LRU缓存测试
+│           └── EnhancedLRUCache.test.ts # 增强型LRU缓存测试
 ├── docs/               # 文档目录
 │   ├── api/            # API文档
-│   └── usage/          # 使用指南
+│   ├── usage/          # 使用指南
+│   ├── LRU缓存优化方案.md # LRU缓存优化设计文档
+│   └── LRU缓存优化进度.md # LRU缓存优化实现进度记录
 ├── samples/            # 示例文件目录
 ├── .codelf/            # 项目文档和记录目录
 ├── .cursor/            # Cursor IDE配置目录
@@ -61,8 +70,9 @@ Title-Changer/
 1. **文件标题自定义**: 允许用户为Obsidian中的每个文件设置自定义显示标题，而不改变文件名
 2. **标题格式化**: 支持多种标题格式化选项，如大小写调整、前缀/后缀添加等
 3. **批量标题处理**: 支持按照规则批量修改多个文件的显示标题
-4. **标题缓存**: 通过缓存机制提高性能，避免重复计算
+4. **标题缓存**: 通过LRU缓存机制提高性能，避免重复计算
 5. **设置界面**: 提供友好的设置界面，允许用户配置插件行为
+6. **缓存持久化**: 支持缓存保存和恢复功能，提高重启后性能
 
 ## 核心模块与职责
 
@@ -72,6 +82,7 @@ Title-Changer/
 | 管理器 | 协调和管理功能模块 | CacheManager.ts, managers/ViewManager.ts |
 | UI组件 | 提供用户界面 | components/modals/TitleModal.ts, settings/SettingTab.ts |
 | 工具类 | 提供通用功能 | utils/DOMUtils.ts, utils/FileUtils.ts |
+| 缓存系统 | 提高性能，减少重复计算 | utils/LRUCache.ts, utils/EnhancedLRUCache.ts, CacheManager.ts |
 | 插件核心 | 插件生命周期与入口 | main.ts, InversifyConfig.ts |
 
 ## 依赖注入与模块化
@@ -90,8 +101,14 @@ Title-Changer/
 - **FileUtils.ts**: 文件处理辅助函数，处理文件路径、名称解析等
 - **RegexUtils.ts**: 正则表达式工具，用于标题格式化和模式匹配
 
+### 缓存系统文件
+- **LRUCacheBase.ts**: 定义LRU缓存基础接口，确保不同实现的兼容性，支持过期时间、权重机制、批量操作、事件系统和序列化功能
+- **LRUCache.ts**: 基于Map结构的经典LRU缓存实现，包含过期时间、权重机制、事件发布和序列化/反序列化支持
+- **EnhancedLRUCache.ts**: 基于双向链表+Map结构的增强型LRU缓存实现，提供更高效的操作，支持固定和滑动过期时间，完整事件系统和序列化功能
+- **LRUCacheFactory.ts**: 工厂类，根据配置创建不同类型的LRU缓存实例，支持容量、权重上限和清理间隔设置，以及序列化/反序列化帮助方法
+- **CacheManager.ts**: 管理标题缓存，协调不同类型缓存的创建和使用，定期清理过期项，支持缓存持久化和从本地存储恢复缓存状态
+
 ### 管理器文件
-- **CacheManager.ts**: 实现标题缓存机制，优化性能并减少重复计算
 - **ViewManager.ts**: 控制视图渲染和更新，管理UI状态
 
 ### 配置文件

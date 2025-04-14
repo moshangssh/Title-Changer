@@ -54,3 +54,118 @@
    - .codelf        // update 更新项目文档
     - project.md    // update 添加核心服务文件、工具类文件、管理器文件等详细说明
    ```
+
+## 2024-07-14 13:20:00
+
+1. LRU缓存优化方案制定
+   ```
+   root
+   - docs                 // update 添加缓存优化方案文档
+    - LRU缓存优化方案.md // add 添加详细的缓存优化分析与实现路线图
+   ```
+
+2. 项目文档完善
+   ```
+   root
+   - .codelf              // update 更新项目文档
+    - project.md         // update 更新LRU缓存相关描述
+    - changelog.md       // update 记录LRU缓存优化方案
+   ```
+
+## 2024-07-15 09:45:00
+
+1. LRU缓存优化阶段一：基础结构升级
+   ```
+   root
+   - src/utils            // update 添加增强型LRU缓存实现
+    - LRUCacheBase.ts     // add 新增LRU缓存基础接口
+    - EnhancedLRUCache.ts // add 添加双向链表+Map结构的高效缓存实现
+    - LRUCacheFactory.ts  // add 添加缓存工厂类，支持动态切换实现
+   - tests/unit/utils     // update 添加缓存相关测试
+    - EnhancedLRUCache.test.ts // add 增强型缓存的单元测试
+   ```
+
+2. 相关组件更新与优化
+   ```
+   root
+   - src                  // update 更新依赖LRU缓存的组件
+    - CacheManager.ts    // update 更新缓存管理器，支持不同缓存实现
+    - settings           // update 更新设置相关代码
+     - TitleChangerSettings.ts // update 添加缓存类型配置选项
+     - sections/PerformanceSettings.ts // update 新增缓存类型选择UI
+   ```
+
+3. 项目文档更新
+   ```
+   root
+   - .codelf             // update 更新项目文档
+    - project.md        // update 更新项目结构与文件说明
+    - changelog.md      // update 记录LRU缓存优化实现进度
+   ```
+
+## 2024-07-16 14:30:00
+
+1. LRU缓存优化阶段二：功能增强
+   ```
+   root
+   - src/utils            // update 实现过期时间和权重机制
+    - LRUCacheBase.ts     // update 扩展接口，添加过期时间、权重和批量操作支持
+    - EnhancedLRUCache.ts // update 实现扩展功能，支持过期时间和权重机制
+    - LRUCache.ts         // update 升级基础缓存，增加过期时间和权重支持
+    - LRUCacheFactory.ts  // update 升级工厂类，支持新参数
+   - tests/unit/utils     // update 增强测试用例
+    - EnhancedLRUCache.test.ts // update 增加过期时间和权重测试
+    - LRUCache.test.ts         // update 增加过期时间和权重测试
+   ```
+
+2. 缓存管理器更新与设置界面增强
+   ```
+   root
+   - src                   // update 更新缓存管理器与设置界面
+    - CacheManager.ts     // update 增加定期清理和过期时间管理
+    - settings            // update 更新设置相关代码
+     - TitleChangerSettings.ts       // update 添加过期时间和权重相关配置
+     - sections/PerformanceSettings.ts // update 增强设置界面，添加过期时间和权重设置
+   ```
+
+3. 项目文档更新
+   ```
+   root
+   - .codelf             // update 更新项目文档
+    - project.md        // update 更新缓存系统说明，添加过期时间和权重相关描述
+    - changelog.md      // update 记录LRU缓存优化阶段二的完成情况
+   ```
+
+## 2024-07-17 10:15:00
+
+1. LRU缓存优化阶段三：高级特性
+   ```
+   root
+   - src/utils            // update 实现事件系统和序列化功能
+    - LRUCacheBase.ts     // update 扩展接口，添加事件系统和序列化相关方法定义
+    - EnhancedLRUCache.ts // update 实现事件发布和序列化/反序列化功能
+    - LRUCache.ts         // update 实现事件发布和序列化/反序列化功能
+    - LRUCacheFactory.ts  // update 添加序列化/反序列化辅助方法
+   ```
+
+2. 缓存持久化功能实现
+   ```
+   root
+   - src                   // update 添加缓存持久化支持
+    - CacheManager.ts     // update 实现缓存保存和加载，添加自动和手动持久化功能
+    - types               // update 更新接口定义
+     - ObsidianExtensions.ts // update 更新ICacheManager接口定义，添加saveCache方法
+    - settings            // update 更新设置相关代码
+     - TitleChangerSettings.ts       // update 添加缓存持久化配置
+     - sections/PerformanceSettings.ts // update 添加持久化选项UI和缓存管理按钮
+   ```
+
+3. 项目文档更新
+   ```
+   root
+   - docs                // update 更新LRU缓存优化进度文档
+    - LRU缓存优化进度.md // update 记录阶段三完成情况和下一步计划
+   - .codelf             // update 更新项目文档
+    - project.md        // update 更新缓存系统说明，添加事件系统和序列化相关描述
+    - changelog.md      // update 记录LRU缓存优化阶段三的完成情况
+   ```

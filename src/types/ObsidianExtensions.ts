@@ -106,6 +106,11 @@ export interface ICacheManager {
      */
     getAllTitles(): Map<string, string>;
     /**
+     * 保存缓存到持久化存储
+     * @returns 是否成功保存
+     */
+    saveCache(): boolean;
+    /**
      * 释放资源
      */
     dispose(): void;

@@ -53,9 +53,36 @@ export interface TitleChangerSettings {
     cacheCapacity: number;
     
     /**
+     * 缓存最大权重，默认与容量相同
+     */
+    cacheMaxWeight?: number;
+    
+    /**
+     * 过期项清理间隔（毫秒），默认60秒
+     */
+    cachePurgeInterval?: number;
+    
+    /**
+     * 是否启用滑动过期时间
+     */
+    cacheSlidingExpiration?: boolean;
+    
+    /**
      * 是否记录缓存统计信息
      */
     logCacheStats: boolean;
+    
+    /**
+     * 是否使用增强型缓存（双向链表+Map实现）
+     * 启用时可提高缓存性能
+     */
+    useFastCache: boolean;
+    
+    /**
+     * 是否启用缓存持久化
+     * 启用时，缓存数据将在插件关闭和开启之间保留
+     */
+    persistCache?: boolean;
     
     /**
      * 是否启用调试模式
@@ -77,6 +104,11 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     useCache: true,
     cacheExpiration: 60,
     cacheCapacity: 1000,
+    cacheMaxWeight: 1000,
+    cachePurgeInterval: 60000, // 60秒
+    cacheSlidingExpiration: true,
     logCacheStats: false,
+    useFastCache: true,  // 默认启用增强型缓存
+    persistCache: false, // 默认不启用持久化
     debugMode: false
-}; 
+};
