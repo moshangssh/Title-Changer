@@ -116,7 +116,7 @@ export class CacheManager implements ICacheManager {
                     this.logger.info(`从持久化存储恢复了 ${cacheSize} 条缓存记录`);
                     return true;
                 } catch (error) {
-                    this.logger.error('恢复缓存失败:', error);
+                    this.logger.error('恢复缓存失败:', { error: String(error) });
                     return false;
                 }
             },
@@ -136,7 +136,7 @@ export class CacheManager implements ICacheManager {
      * 公共方法，可供外部调用
      * @returns 是否成功保存
      */
-    saveCache(): boolean {
+    saveCache(): boolean | null {
         return tryCatchWrapper(
             () => {
                 // 检查是否启用了缓存持久化

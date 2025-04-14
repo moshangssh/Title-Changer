@@ -109,7 +109,7 @@ export interface ICacheManager {
      * 保存缓存到持久化存储
      * @returns 是否成功保存
      */
-    saveCache(): boolean;
+    saveCache(): boolean | null;
     /**
      * 释放资源
      */

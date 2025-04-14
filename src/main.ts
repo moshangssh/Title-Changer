@@ -247,6 +247,14 @@ export class TitleChangerPlugin extends Plugin {
         return this.eventBus;
     }
 
+    /**
+     * 获取缓存管理器实例
+     * @returns 缓存管理器实例
+     */
+    getCacheManager(): ICacheManager {
+        return this.container.get<ICacheManager>(TYPES.CacheManager);
+    }
+
     // 添加样式
     private loadStyles() {
         // 添加样式元素

@@ -122,4 +122,4 @@ Title-Changer/
 - **Constants.ts**: 定义全局常量，统一管理配置值
 
 ### 入口文件
-- **main.ts**: 插件入口点，处理插件的生命周期事件，初始化各模块
+- **main.ts**: 插件入口点，处理插件的生命周期事件，初始化各模块。包含访问各主要组件的方法，如getCacheManager()、getViewManager()、getLogger()等
