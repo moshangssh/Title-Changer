@@ -20,6 +20,7 @@ import { TitleStateAdapter } from './services/TitleStateAdapter';
 import { EventBusService } from './services/EventBusService';
 import { IEventBusService } from './types/ObsidianExtensions';
 import { GraphView } from './views/GraphView';
+import { ICacheManager } from './types/ObsidianExtensions';
 
 export class TitleChangerPlugin extends Plugin {
     settings!: TitleChangerSettings;
@@ -157,6 +158,19 @@ export class TitleChangerPlugin extends Plugin {
         // 卸载标题状态适配器
         if (this.titleStateAdapter) {
             this.titleStateAdapter.unload();
+        }
+        
+        // 处理缓存管理器资源释放
+        if (this.container) {
+            try {
+                const cacheManager = this.container.get<ICacheManager>(TYPES.CacheManager);
+                if (cacheManager && typeof cacheManager.dispose === 'function') {
+                    cacheManager.dispose();
+                    this.logger.info('缓存管理器资源已释放');
+                }
+            } catch (error) {
+                this.logger.error('释放缓存管理器资源时出错', { error });
+            }
         }
         
         // 清理所有计时器

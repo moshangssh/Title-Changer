@@ -28,3 +28,29 @@
     - config     // add 添加统一配置文件
     - views      // refact 重构视图逻辑
    ```
+
+## 2024-07-13 16:45:00
+
+1. 项目文档更新与完善
+   ```
+   root
+   - .codelf        // update 更新项目文档
+    - project.md    // update 更新项目结构描述，添加详细文件说明
+    - changelog.md  // update 更新变更日志，添加最新记录
+   ```
+
+2. 目录结构校验与修正
+   ```
+   root
+   - src           // verify 验证源代码目录结构
+    - styles       // add 添加到项目文档中
+   - samples       // add 添加到项目文档中
+   - .cursor       // add 添加到项目文档中
+   ```
+
+3. 文件详细说明补充
+   ```
+   root
+   - .codelf        // update 更新项目文档
+    - project.md    // update 添加核心服务文件、工具类文件、管理器文件等详细说明
+   ```

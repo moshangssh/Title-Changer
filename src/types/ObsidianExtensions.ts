@@ -101,6 +101,14 @@ export interface ICacheManager {
      * @param displayTitle 显示标题
      */
     updateTitleCache(fileName: string, displayTitle: string): void;
+    /**
+     * 获取所有缓存的标题
+     */
+    getAllTitles(): Map<string, string>;
+    /**
+     * 释放资源
+     */
+    dispose(): void;
 }
 
 /**

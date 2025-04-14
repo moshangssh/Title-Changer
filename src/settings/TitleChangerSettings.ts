@@ -48,6 +48,16 @@ export interface TitleChangerSettings {
     cacheExpiration: number;
     
     /**
+     * LRU缓存容量，默认1000
+     */
+    cacheCapacity: number;
+    
+    /**
+     * 是否记录缓存统计信息
+     */
+    logCacheStats: boolean;
+    
+    /**
      * 是否启用调试模式
      */
     debugMode: boolean;
@@ -66,5 +76,7 @@ export const DEFAULT_SETTINGS: TitleChangerSettings = {
     enableMarkdownView: true,
     useCache: true,
     cacheExpiration: 60,
+    cacheCapacity: 1000,
+    logCacheStats: false,
     debugMode: false
 }; 
