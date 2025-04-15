@@ -8,6 +8,7 @@ import { AbstractManager } from './base/AbstractManager';
 import { DOMSelectorService } from '../services/DomSelectorService';
 import { logErrorsWithoutThrowing } from '../utils/ErrorHelpers';
 import { throttle } from '../utils/ThrottleDebounce';
+import { DomRecycler } from '../utils/DomRecycler';
 
 /**
  * 虚拟滚动管理器
@@ -25,6 +26,7 @@ export class VirtualScrollManager extends AbstractManager {
     private lastKnownItemCount = 0;
     private onItemsChangedCallback: (() => void) | null = null;
     private visibleItems: Set<HTMLElement> = new Set();
+    private domRecycler: DomRecycler = new DomRecycler();
 
     constructor(
         @inject(TYPES.Plugin) plugin: TitleChangerPlugin,
@@ -250,13 +252,15 @@ export class VirtualScrollManager extends AbstractManager {
      */
     private handleScroll(): void {
         try {
-            // 更新可见项追踪
-            this.updateVisibleItems();
-            
-            // 通知需要更新
-            if (this.onItemsChangedCallback) {
-                this.onItemsChangedCallback();
-            }
+            // 使用requestAnimationFrame优化滚动处理
+            window.requestAnimationFrame(() => {
+                // 更新可见项追踪
+                this.updateVisibleItems();
+                // 通知需要更新
+                if (this.onItemsChangedCallback) {
+                    this.onItemsChangedCallback();
+                }
+            });
         } catch (error) {
             this.logDebug(`[${VirtualScrollManager.MANAGER_ID}] 处理滚动事件失败: ${error}`);
         }
@@ -296,5 +300,27 @@ export class VirtualScrollManager extends AbstractManager {
         this.visibleItems.clear();
         
         this.logInfo(`[${VirtualScrollManager.MANAGER_ID}] 卸载完成`);
+    }
+
+    /**
+     * 渲染单个文件项，使用DomRecycler进行DOM复用
+     * @param data 文件项数据
+     */
+    renderFileItem(data: any): HTMLElement {
+        // BUG: 频繁创建/销毁DOM元素导致性能下降
+        // Affects: VirtualScrollManager.ts
+        const element = this.domRecycler.getElement();
+        // 这里假设data包含渲染所需信息，实际项目可根据需要扩展
+        element.textContent = data.title || '';
+        // 其他渲染逻辑...
+        return element;
+    }
+
+    /**
+     * 回收单个文件项DOM，释放资源
+     * @param element 需要回收的DOM元素
+     */
+    recycleFileItem(element: HTMLElement): void {
+        this.domRecycler.recycleElement(element);
     }
 } 

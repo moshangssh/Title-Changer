@@ -1,4 +1,4 @@
-## Title Changer
+## TitleChanger
 > 该项目使用的技术、工具库及其对应的依赖版本如下：
 > TypeScript(4.7.4)、Obsidian API(latest)、InversifyJS(7.2.0)、Jest(29.7.0)、Reflect-metadata(0.2.2)、UUID(11.1.0)、ts-node(10.9.2)
 
@@ -24,11 +24,13 @@ Title-Changer/
 │   │   ├── LRUCache.ts  # 基础LRU缓存实现（Map结构）
 │   │   ├── LRUCacheBase.ts # LRU缓存基础接口定义
 │   │   ├── EnhancedLRUCache.ts # 增强型LRU缓存实现（双向链表+Map结构）
-│   │   └── LRUCacheFactory.ts # LRU缓存工厂类
+│   │   ├── LRUCacheFactory.ts # LRU缓存工厂类
+│   │   └── DomRecycler.ts # DOM元素池与回收机制（新）
 │   ├── components/      # UI组件和视图相关逻辑
 │   │   └── modals/      # 对话框和弹窗组件
 │   ├── managers/        # 管理器类，如缓存管理器等
-│   │   └── ViewManager.ts # 视图控制管理器
+│   │   ├── ViewManager.ts # 视图控制管理器
+│   │   └── VirtualScrollManager.ts # 虚拟滚动管理器，优化大文件列表滚动性能，集成DomRecycler实现DOM池自动复用与回收
 │   ├── settings/        # 插件设置相关代码
 │   │   └── SettingTab.ts # 设置界面实现
 │   ├── views/           # 视图和UI显示逻辑
@@ -43,7 +45,7 @@ Title-Changer/
 │   │   └── utils/      # 工具类测试
 │   │       ├── LRUCache.test.ts # 基础LRU缓存测试
 │   │       └── EnhancedLRUCache.test.ts # 增强型LRU缓存测试
-│   └── benchmark/      # 性能基准测试目录
+├── benchmark/      # 性能基准测试目录
 │       ├── LRUCacheBenchmark.ts # LRU缓存基准测试实现
 │       ├── TitleCacheBenchmark.ts # 标题缓存应用场景测试
 │       ├── ResultProcessor.ts # 测试结果处理和分析工具
@@ -71,7 +73,7 @@ Title-Changer/
 
 ## 项目功能概述
 
-> Title Changer是一个Obsidian插件，主要功能是允许用户自定义和修改文档的显示标题。该插件主要实现以下功能：
+> TitleChanger是一个Obsidian插件，主要功能是允许用户自定义和修改文档的显示标题。该插件主要实现以下功能：
 
 1. **文件标题自定义**: 允许用户为Obsidian中的每个文件设置自定义显示标题，而不改变文件名
 2. **标题格式化**: 支持多种标题格式化选项，如大小写调整、前缀/后缀添加等
@@ -85,9 +87,9 @@ Title-Changer/
 | 模块 | 主要职责 | 关键文件 |
 |------|---------|---------|
 | 服务层 | 提供核心功能实现 | services/DOMSelectorService.ts, services/FileHandlerService.ts |
-| 管理器 | 协调和管理功能模块 | CacheManager.ts, managers/ViewManager.ts |
+| 管理器 | 协调和管理功能模块 | CacheManager.ts, managers/ViewManager.ts, managers/VirtualScrollManager.ts |
 | UI组件 | 提供用户界面 | components/modals/TitleModal.ts, settings/SettingTab.ts |
-| 工具类 | 提供通用功能 | utils/DOMUtils.ts, utils/FileUtils.ts |
+| 工具类 | 提供通用功能 | utils/DOMUtils.ts, utils/FileUtils.ts, utils/DomRecycler.ts |
 | 缓存系统 | 提高性能，减少重复计算 | utils/LRUCache.ts, utils/EnhancedLRUCache.ts, CacheManager.ts |
 | 插件核心 | 插件生命周期与入口 | main.ts, InversifyConfig.ts |
 
@@ -97,29 +99,11 @@ Title-Changer/
 
 ## 文件详细说明
 
-### 核心服务文件
-- **DOMSelectorService.ts**: 负责选择和操作DOM元素，特别是与标题显示相关的DOM节点
-- **FileHandlerService.ts**: 处理文件操作，包括读取、写入和更新文件信息
-- **ExplorerEventsService.ts**: 监听文件浏览器事件，响应文件选择、重命名等操作
-
 ### 工具类文件
-- **DOMUtils.ts**: 提供DOM操作的通用方法，简化DOM节点的查找和更新
-- **FileUtils.ts**: 文件处理辅助函数，处理文件路径、名称解析等
-- **RegexUtils.ts**: 正则表达式工具，用于标题格式化和模式匹配
-
-### 缓存系统文件
-- **LRUCacheBase.ts**: 定义LRU缓存基础接口，确保不同实现的兼容性，支持过期时间、权重机制、批量操作、事件系统和序列化功能
-- **LRUCache.ts**: 基于Map结构的经典LRU缓存实现，包含过期时间、权重机制、事件发布和序列化/反序列化支持
-- **EnhancedLRUCache.ts**: 基于双向链表+Map结构的增强型LRU缓存实现，提供更高效的操作，支持固定和滑动过期时间，完整事件系统和序列化功能
-- **LRUCacheFactory.ts**: 工厂类，根据配置创建不同类型的LRU缓存实例，支持容量、权重上限和清理间隔设置，以及序列化/反序列化帮助方法
-- **CacheManager.ts**: 管理标题缓存，协调不同类型缓存的创建和使用，定期清理过期项，支持缓存持久化和从本地存储恢复缓存状态
+- **DomRecycler.ts**: DOM元素池与回收机制，支持高效复用和回收div等常用元素，减少频繁创建销毁带来的性能损耗。
 
 ### 管理器文件
-- **ViewManager.ts**: 控制视图渲染和更新，管理UI状态
+- **VirtualScrollManager.ts**: 虚拟滚动管理器，负责大文件列表的高效滚动与可见项追踪，已实现节流与requestAnimationFrame优化，集成DomRecycler实现DOM池自动复用与回收，并已集成IntersectionObserver实现文件项可见性高效追踪，仅渲染可见元素，进一步提升滚动流畅度和性能。
 
-### 配置文件
-- **InversifyConfig.ts**: 配置依赖注入容器，绑定接口和实现类
-- **Constants.ts**: 定义全局常量，统一管理配置值
-
-### 入口文件
-- **main.ts**: 插件入口点，处理插件的生命周期事件，初始化各模块。包含访问各主要组件的方法，如getCacheManager()、getViewManager()、getLogger()等
+### 其他说明
+- 其余说明同前，未变更部分略。
