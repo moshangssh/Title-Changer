@@ -13,6 +13,7 @@ Title-Changer/
 │   ├── services/        # 服务层实现，包含DOM选择器、事件处理等核心服务
 │   │   ├── DOMSelectorService.ts # DOM元素选择和操作服务
 │   │   ├── FileHandlerService.ts # 文件处理和操作服务
+│   │   ├── TitleService.ts # 标题服务，负责自定义标题获取与回退逻辑
 │   │   └── ExplorerEventsService.ts # 文件浏览器事件监听服务
 │   ├── types/           # TypeScript类型定义和接口
 │   │   ├── interfaces/  # 接口定义目录
@@ -86,10 +87,10 @@ Title-Changer/
 
 | 模块 | 主要职责 | 关键文件 |
 |------|---------|---------|
-| 服务层 | 提供核心功能实现 | services/DOMSelectorService.ts, services/FileHandlerService.ts |
+| 服务层 | 提供核心功能实现 | services/DOMSelectorService.ts, services/FileHandlerService.ts, services/TitleService.ts |
 | 管理器 | 协调和管理功能模块 | CacheManager.ts, managers/ViewManager.ts, managers/VirtualScrollManager.ts |
 | UI组件 | 提供用户界面 | components/modals/TitleModal.ts, settings/SettingTab.ts |
-| 工具类 | 提供通用功能 | utils/DOMUtils.ts, utils/FileUtils.ts, utils/DomRecycler.ts |
+| 工具类 | 提供通用功能 | utils/DOMUtils.ts, utils/FileUtils.ts, utils.DonRecycler.ts |
 | 缓存系统 | 提高性能，减少重复计算 | utils/LRUCache.ts, utils/EnhancedLRUCache.ts, CacheManager.ts |
 | 插件核心 | 插件生命周期与入口 | main.ts, InversifyConfig.ts |
 
@@ -98,6 +99,9 @@ Title-Changer/
 > 项目采用InversifyJS实现依赖注入，通过面向接口编程提高代码的可测试性和可维护性。主要模块通过IoC容器进行管理，降低组件间的耦合度。
 
 ## 文件详细说明
+
+### 服务层文件
+- **TitleService.ts**: 标题服务，负责自定义标题获取、缓存命中与回退逻辑。2024-07-22修复了GraphView节点显示异常，未命中缓存时回退只返回文件名（去除路径和扩展名），不会再显示路径+文件名+md。
 
 ### 工具类文件
 - **DomRecycler.ts**: DOM元素池与回收机制，支持高效复用和回收div等常用元素，减少频繁创建销毁带来的性能损耗。

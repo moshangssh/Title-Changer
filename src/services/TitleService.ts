@@ -58,10 +58,11 @@ export class TitleService {
                 }
             }
             
-            return displayTitle || (fallbackToOriginal ? fileName : null);
+            return displayTitle || (fallbackToOriginal ? baseName : null);
         } catch (error) {
             this.logger.error('处理文件标题时出错', { fileName, error });
-            return fallbackToOriginal ? fileName : null;
+            const baseName = this.fileService.getBaseName(fileName);
+            return fallbackToOriginal ? baseName : null;
         }
     }
     

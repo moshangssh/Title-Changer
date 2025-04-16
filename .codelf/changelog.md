@@ -1,3 +1,19 @@
+## 2024-07-22 20:00:00
+
+1. 修复GraphView启动时部分节点显示“路径+文件名+md”问题
+   ```
+   root
+   - src/services/TitleService.ts // fix getDisplayTitle回退逻辑，未命中缓存时只返回文件名（去除路径和扩展名）
+   ```
+
+2. 项目文档同步
+   ```
+   root
+   - .codelf/project.md // update TitleService.ts回退逻辑修复说明
+   ```
+
+---
+
 ## 2024-07-22 00:00:00
 
 1. 集成IntersectionObserver到VirtualScrollManager，实现文件项可见性高效追踪，仅渲染可见元素，进一步提升虚拟滚动性能
