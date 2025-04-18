@@ -22,13 +22,53 @@ export class BasicSettingsSection implements SettingSection {
     display(containerEl: HTMLElement): void {
         containerEl.createEl('h3', { text: '基本功能' });
         
+        // 预设表达式选项
+        const presetExpressions: { label: string; value: string }[] = [
+            {
+                label: '匹配日期格式(YYYY_MM_DD)后的内容',
+                value: '.*_\\d{4}_\\d{2}_\\d{2}_(.+)$',
+            },
+            {
+                label: '匹配周格式(YYYY_WW)后的内容',
+                value: '.*_\\d{4}_\\d{2}_(.+)$',
+            },
+            // 可扩展更多表达式
+        ];
+
+        // 下拉菜单选择表达式
+        const presetSetting = new Setting(containerEl)
+            .setName('选择常用表达式')
+            .setDesc('可快速选择常用表达式，选中后会自动填充到下方输入框，可继续手动编辑。');
+        
+        const selectEl = document.createElement('select');
+        selectEl.style.marginRight = '8px';
+        presetExpressions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.text = opt.label;
+            selectEl.appendChild(option);
+        });
+        // 默认选中当前设置
+        selectEl.value = this.plugin.settings.regexPattern;
+        selectEl.addEventListener('change', async (e) => {
+            const value = (e.target as HTMLSelectElement).value;
+            regexInput.setValue(value); // 自动填充输入框
+            this.plugin.settings.regexPattern = value;
+            await this.plugin.saveSettings();
+        });
+        presetSetting.controlEl.appendChild(selectEl);
+        
         // 正则表达式设置
         const regexSetting = new Setting(containerEl)
             .setName('标题提取正则表达式')
             .setDesc('用于从文件名中提取显示名称的正则表达式。使用括号()来捕获要显示的部分。默认模式匹配日期格式(YYYY_MM_DD)后的所有内容。');
         
+        // 先声明 regexInput 变量
+        let regexInput: import('obsidian').TextComponent;
+        
         // 创建正则表达式输入字段
-        const regexInput = regexSetting.addText(text => {
+        regexSetting.addText(text => {
+            regexInput = text;
             text.setPlaceholder('例如: .*_\\d{4}_\\d{2}_\\d{2}_(.+)$')
                 .setValue(this.plugin.settings.regexPattern)
                 .onChange(async (value) => {

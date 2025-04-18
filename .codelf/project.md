@@ -109,5 +109,10 @@ Title-Changer/
 ### 管理器文件
 - **VirtualScrollManager.ts**: 虚拟滚动管理器，负责大文件列表的高效滚动与可见项追踪，已实现节流与requestAnimationFrame优化，集成DomRecycler实现DOM池自动复用与回收，并已集成IntersectionObserver实现文件项可见性高效追踪，仅渲染可见元素，进一步提升滚动流畅度和性能。
 
+### 设置界面表达式下拉菜单（2024-07-22）
+- 在 settings/sections/BasicSettings.ts 新增表达式下拉菜单，内置常用表达式（如“随便什么内容_YYYY_WW_要被提取的内容”）。
+- 用户可通过下拉菜单一键选择表达式，自动填充到正则输入框，仍可手动编辑。
+- 保持原有手动输入和实时校验逻辑，最大程度减少变更，符合最小化变更原则。
+
 ### 其他说明
 - 其余说明同前，未变更部分略。

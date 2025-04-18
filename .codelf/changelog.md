@@ -1,6 +1,6 @@
 ## 2024-07-22 20:00:00
 
-1. 修复GraphView启动时部分节点显示“路径+文件名+md”问题
+1. 修复GraphView启动时部分节点显示"路径+文件名+md"问题
    ```
    root
    - src/services/TitleService.ts // fix getDisplayTitle回退逻辑，未命中缓存时只返回文件名（去除路径和扩展名）
@@ -58,6 +58,22 @@
    ```
    root
    - .codelf/project.md // update 新增DomRecycler.ts说明，完善工具类文件描述
+   ```
+
+---
+
+## 2024-07-22 21:00:00
+
+1. 设置界面新增表达式下拉菜单，支持常用表达式（如"随便什么内容_YYYY_WW_要被提取的内容"）一键选择，自动填充输入框，仍可手动编辑。
+   ```
+   root
+   - src/settings/sections/BasicSettings.ts // add 新增表达式下拉菜单，内置常用表达式选项，优化正则表达式配置体验
+   ```
+
+2. 项目文档同步
+   ```
+   root
+   - .codelf/project.md // update 新增表达式下拉菜单功能说明
    ```
 
 ---

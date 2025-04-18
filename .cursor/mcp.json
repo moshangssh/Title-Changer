@@ -8,7 +8,7 @@
       }
     },
     "codelf": {
-      "command": "npx",
+      "command": "cmd /c npx",
       "args": ["codelf"]
     }
   }
